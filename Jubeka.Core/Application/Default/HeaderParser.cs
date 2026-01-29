@@ -1,4 +1,4 @@
-namespace Jubeka.Core.Application.Implementation;
+namespace Jubeka.Core.Application.Default;
 
 public sealed class HeaderParser(IVariableSubstitutor substitutor) : IHeaderParser
 {
