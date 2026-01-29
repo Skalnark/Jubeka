@@ -2,11 +2,13 @@ namespace Jubeka.Core.Application.Default;
 
 public sealed class HeaderParser(IVariableSubstitutor substitutor) : IHeaderParser
 {
-    public IReadOnlyList<(string Key, string Value)> Parse(IEnumerable<string> rawHeaders, IReadOnlyDictionary<string, string> vars)
+    public IReadOnlyList<(string Key, string Value)> Parse(IEnumerable<string>? rawHeaders, IReadOnlyDictionary<string, string> vars)
     {
         List<(string Key, string Value)> headers = [];
 
-        foreach (string rawHeader in rawHeaders)
+        IEnumerable<string> raw = rawHeaders ?? [];
+
+        foreach (string rawHeader in raw)
         {
             int separatorIndex = rawHeader.IndexOf(':');
             if (separatorIndex <= 0)

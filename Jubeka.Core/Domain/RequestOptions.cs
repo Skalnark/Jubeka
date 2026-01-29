@@ -5,5 +5,5 @@ public sealed record RequestOptions(
     string Url,
     string? Body = null,
     IReadOnlyList<string>? QueryParameters = null,
-    IReadOnlyList<(string Key, string Value)>? Headers = null
+    IReadOnlyList<string>? Headers = null
 );

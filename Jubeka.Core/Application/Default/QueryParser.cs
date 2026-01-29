@@ -2,11 +2,13 @@ namespace Jubeka.Core.Application.Default;
 
 public sealed class QueryParser(IVariableSubstitutor substitutor) : IQueryParser
 {
-    public IReadOnlyList<(string Key, string Value)> Parse(IEnumerable<string> rawQueryParameters, IReadOnlyDictionary<string, string> vars)
+    public IReadOnlyList<(string Key, string Value)> Parse(IEnumerable<string>? rawQueryParameters, IReadOnlyDictionary<string, string> vars)
     {
         List<(string Key, string Value)> result = [];
 
-        foreach (string rawParam in rawQueryParameters)
+        IEnumerable<string> raw = rawQueryParameters ?? [];
+
+        foreach (string rawParam in raw)
         {
             string substitutedParam = substitutor.Substitute(rawParam, vars);
             int separatorIndex = substitutedParam.IndexOf('=');

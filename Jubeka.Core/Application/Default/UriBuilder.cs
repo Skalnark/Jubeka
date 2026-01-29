@@ -3,11 +3,12 @@ using System.Web;
 
 namespace Jubeka.Core.Application.Default;
 
-public sealed class UriBuilderHelper : IUriBuilderHelper
+public sealed class UriBuilderHelper(IVariableSubstitutor variableSubstitutor): IUriBuilderHelper
 {
-    public Uri Build(string rawUrl, IReadOnlyList<(string Key, string Value)> queryParams)
+    public Uri Build(string rawUrl, IReadOnlyDictionary<string, string> vars, IReadOnlyList<(string Key, string Value)> queryParams)
     {
-        UriBuilder uriBuilder = new (rawUrl);
+        string finalUrl = variableSubstitutor.Substitute(rawUrl, vars);
+        UriBuilder uriBuilder = new (finalUrl);
         NameValueCollection query = HttpUtility.ParseQueryString(uriBuilder.Query);
 
         foreach ((string? Key, string? Value) in queryParams)
