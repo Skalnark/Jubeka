@@ -1,7 +1,5 @@
 namespace Jubeka.Core.Application.Implementation;
 
-using Jubeka.Core.Application;
-
 public sealed class HeaderParser(IVariableSubstitutor substitutor) : IHeaderParser
 {
     public IReadOnlyList<(string Key, string Value)> Parse(IEnumerable<string> rawHeaders, IReadOnlyDictionary<string, string> vars)
