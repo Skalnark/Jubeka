@@ -10,18 +10,21 @@ public sealed class QueryParser(IVariableSubstitutor substitutor) : IQueryParser
 
         foreach (string rawParam in raw)
         {
-            string substitutedParam = substitutor.Substitute(rawParam, vars);
-            int separatorIndex = substitutedParam.IndexOf('=');
+            int separatorIndex = rawParam.IndexOf('=');
 
-            if (separatorIndex >= 0)
+            if (separatorIndex >= 1)
             {
-                string key = substitutedParam.Substring(0, separatorIndex);
-                string value = substitutedParam.Substring(separatorIndex + 1);
-                result.Add((key, value));
-            }
-            else
-            {
-                result.Add((substitutedParam, string.Empty));
+                string key = rawParam.Substring(0, separatorIndex);
+                string value = rawParam.Substring(separatorIndex + 1);
+
+                string substitutedParam = substitutor.Substitute(value, vars);
+
+                if(string.IsNullOrEmpty(key) || string.IsNullOrEmpty(substitutedParam))
+                {
+                    continue;
+                }
+
+                result.Add((key, substitutedParam));
             }
         }
 

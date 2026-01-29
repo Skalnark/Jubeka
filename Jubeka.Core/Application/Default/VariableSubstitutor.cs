@@ -11,7 +11,6 @@ public class VariableSubstitutor : IVariableSubstitutor
 
         string result = input;
 
-        // TODO: test this
         foreach ((string? key, string? value) in vars)
         {
             result = result.Replace($"{{{{{key}}}}}", value, StringComparison.OrdinalIgnoreCase);

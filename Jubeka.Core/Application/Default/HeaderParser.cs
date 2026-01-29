@@ -19,8 +19,12 @@ public sealed class HeaderParser(IVariableSubstitutor substitutor) : IHeaderPars
 
             string key = rawHeader.Substring(0, separatorIndex).Trim();
             string value = rawHeader.Substring(separatorIndex + 1).Trim();
-
             string substitutedValue = substitutor.Substitute(value, vars);
+
+            if(string.IsNullOrEmpty(key) || string.IsNullOrEmpty(substitutedValue))
+            {
+                continue;
+            }
 
             headers.Add((key, substitutedValue));
         }
