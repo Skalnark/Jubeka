@@ -19,6 +19,11 @@ assert_contains() {
 		echo "$output" >&2
 		exit 1
 	fi
+	if [[ -n "${current_test:-}" ]]; then
+		echo "running $current_test"
+	else
+		echo "running"
+	fi
 	echo "PASS: $expected"
 }
 
@@ -26,6 +31,7 @@ run_cmd() {
 	local label="$1"
 	shift
 	local output
+	current_test="$label"
 	output=$("$@" 2>&1)
 	echo "[$label]"
 	echo "$output"
