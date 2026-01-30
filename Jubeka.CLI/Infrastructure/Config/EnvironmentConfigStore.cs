@@ -137,7 +137,12 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
             case OpenApiSourceKind.File:
                 if (!string.IsNullOrWhiteSpace(source.Value) && File.Exists(source.Value))
                 {
-                    File.Copy(source.Value, path, true);
+                    string sourceFullPath = Path.GetFullPath(source.Value);
+                    string targetFullPath = Path.GetFullPath(path);
+                    if (!string.Equals(sourceFullPath, targetFullPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Copy(source.Value, path, true);
+                    }
                 }
                 else
                 {

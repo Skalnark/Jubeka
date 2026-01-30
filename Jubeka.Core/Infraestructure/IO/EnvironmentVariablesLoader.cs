@@ -18,7 +18,7 @@ public sealed class EnvironmentVariablesLoader : IEnvironmentVariablesLoader
             throw new FileNotFoundException("Environment variables file not found.", path);
         }
 
-        string yaml = File.ReadAllText(path);
+        string yaml = NormalizeYamlIndentation(File.ReadAllText(path));
         IDeserializer deserializer = new DeserializerBuilder()
             .IgnoreUnmatchedProperties()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -43,5 +43,31 @@ public sealed class EnvironmentVariablesLoader : IEnvironmentVariablesLoader
     private sealed class EnvironmentYaml
     {
         public Dictionary<string, string>? Variables { get; init; }
+    }
+
+    private static string NormalizeYamlIndentation(string yaml)
+    {
+        if (string.IsNullOrEmpty(yaml))
+        {
+            return yaml;
+        }
+
+        string[] lines = yaml.Split('\n');
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i];
+            int tabCount = 0;
+            while (tabCount < line.Length && line[tabCount] == '\t')
+            {
+                tabCount++;
+            }
+
+            if (tabCount > 0)
+            {
+                lines[i] = new string(' ', tabCount * 2) + line[tabCount..];
+            }
+        }
+
+        return string.Join('\n', lines);
     }
 }

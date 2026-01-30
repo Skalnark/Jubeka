@@ -9,7 +9,7 @@ public sealed class ResponseWriter(IResponseFormatter formatter) : IResponseWrit
 
     public void Write(ResponseData response, bool pretty)
     {
-        System.Console.WriteLine($"HTTP {response.StatusCode} {response.ReasonPhrase}");
+        System.Console.WriteLine($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
 
         foreach ((string? name, string? value) in response.Headers)
         {

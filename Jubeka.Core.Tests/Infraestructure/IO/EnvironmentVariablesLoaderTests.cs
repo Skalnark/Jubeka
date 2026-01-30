@@ -38,4 +38,22 @@ public class EnvironmentVariablesLoaderTests
         EnvironmentVariablesLoader loader = new();
         Assert.Throws<FileNotFoundException>(() => loader.Load("/tmp/does-not-exist.yml"));
     }
+
+    [Fact]
+    public void Load_TabIndentedYaml_ReturnsVariables()
+    {
+        string tmp = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(tmp, "variables:\n\ttoken: abc\n");
+            EnvironmentVariablesLoader loader = new();
+            IReadOnlyDictionary<string, string> vars = loader.Load(tmp);
+
+            Assert.Equal("abc", vars["token"]);
+        }
+        finally
+        {
+            if (File.Exists(tmp)) File.Delete(tmp);
+        }
+    }
 }

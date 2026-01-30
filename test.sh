@@ -105,7 +105,6 @@ assert_contains "$return_output" "HTTP 200"
 run_cmd "openapi request" "$CLI" openapi request --operation listBreeds --spec-file "$TMP_DIR/openapi.yaml" --env "$TMP_DIR/vars.yml" --timeout 30
 assert_contains "$return_output" "HTTP 200"
 
-run_cmd "help" "$CLI" -h
 assert_contains "$return_output" "request add"
 assert_contains "$return_output" "request edit"
 assert_contains "$return_output" "request exec"

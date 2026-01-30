@@ -38,13 +38,14 @@ public sealed class OpenApiSpecLoader : IOpenApiSpecLoader
             throw new OpenApiSpecificationException($"OpenAPI file not found: {path}");
         }
 
-        string content = File.ReadAllText(path, Encoding.UTF8);
+        string content = NormalizeIndentation(File.ReadAllText(path, Encoding.UTF8));
         return LoadFromRaw(content);
     }
 
     private static OpenApiDocument LoadFromRaw(string raw)
     {
-        if (string.IsNullOrWhiteSpace(raw))
+        string normalized = NormalizeIndentation(raw);
+        if (string.IsNullOrWhiteSpace(normalized))
         {
             throw new OpenApiSpecificationException("OpenAPI raw content is empty.");
         }
@@ -52,7 +53,7 @@ public sealed class OpenApiSpecLoader : IOpenApiSpecLoader
         try
         {
             OpenApiStringReader reader = new();
-            OpenApiDocument document = reader.Read(raw, out OpenApiDiagnostic diagnostic);
+            OpenApiDocument document = reader.Read(normalized, out OpenApiDiagnostic diagnostic);
             if (diagnostic.Errors.Count > 0)
             {
                 string message = string.Join("; ", diagnostic.Errors.Select(e => e.Message));
@@ -69,5 +70,31 @@ public sealed class OpenApiSpecLoader : IOpenApiSpecLoader
         {
             throw new OpenApiSpecificationException($"Invalid OpenAPI specification: {ex.Message}");
         }
+    }
+
+    private static string NormalizeIndentation(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            return content;
+        }
+
+        string[] lines = content.Split('\n');
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i];
+            int tabCount = 0;
+            while (tabCount < line.Length && line[tabCount] == '\t')
+            {
+                tabCount++;
+            }
+
+            if (tabCount > 0)
+            {
+                lines[i] = new string(' ', tabCount * 2) + line[tabCount..];
+            }
+        }
+
+        return string.Join('\n', lines);
     }
 }
