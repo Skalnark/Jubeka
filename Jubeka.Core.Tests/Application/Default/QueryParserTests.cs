@@ -6,7 +6,7 @@ namespace Jubeka.Core.Tests.Application.Default;
 
 public class QueryParserTests
 {
-    static readonly IQueryParser _parser = new QueryParser(new VariableSubstitutor());
+    static readonly IQueryParser _parser = new QueryParser();
 
     [Fact]
     public void ValidKeyValuePairs_AreParsedCorrectly()

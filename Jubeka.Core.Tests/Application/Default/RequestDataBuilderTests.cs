@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using Jubeka.Core.Application.Default;
 using Jubeka.Core.Domain;
 using Jubeka.Core.Infraestructure.IO;
@@ -18,11 +14,10 @@ namespace Jubeka.Core.Tests.Application.Default
             try
             {
                 File.WriteAllText(tmp, "payload");
-                var bodyLoader = new BodyLoader();
-                var substitutor = new VariableSubstitutor();
-                var headerParser = new HeaderParser(substitutor);
-                var queryParser = new QueryParser(substitutor);
-                var uriBuilder = new UriBuilderHelper(substitutor);
+                BodyLoader bodyLoader = new();
+                HeaderParser headerParser = new();
+                QueryParser queryParser = new();
+                UriBuilderHelper uriBuilder = new(queryParser);
 
                 var builder = new RequestDataBuilder(bodyLoader, headerParser, queryParser, uriBuilder);
                 var options = new RequestOptions(

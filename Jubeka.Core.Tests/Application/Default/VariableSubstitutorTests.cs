@@ -6,8 +6,6 @@ namespace Jubeka.Core.Tests.Application.Default
 {
     public class VariableSubstitutorTests
     {
-        IVariableSubstitutor substitutor = new VariableSubstitutor();
-
         [Theory]
         [InlineData("Hello {{name}}", "Hello World", "name", "World")]
         [InlineData("No placeholders here", "No placeholders here", null, null)]
@@ -21,7 +19,7 @@ namespace Jubeka.Core.Tests.Application.Default
                 vars[placeholder] = var;
             }
 
-            string result = substitutor.Substitute(raw, vars);
+            string result = VariableSubstitutor.Substitute(raw, vars);
 
             Assert.Equal(expected, result);
         }
@@ -29,9 +27,8 @@ namespace Jubeka.Core.Tests.Application.Default
         [Fact]
         public void Substitute_ReplacesPlaceholders_CaseInsensitive()
         {
-            var substitutor = new VariableSubstitutor();
             var vars = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { { "Name", "World" } };
-            string result = substitutor.Substitute("Hello {{name}}", vars);
+            string result = VariableSubstitutor.Substitute("Hello {{name}}", vars);
             Assert.Equal("Hello World", result);
         }
     }

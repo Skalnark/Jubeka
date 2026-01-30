@@ -1,6 +1,6 @@
 namespace Jubeka.Core.Application.Default;
 
-public sealed class HeaderParser(IVariableSubstitutor substitutor) : IHeaderParser
+public sealed class HeaderParser : IHeaderParser
 {
     public IReadOnlyList<(string Key, string Value)> Parse(IEnumerable<string>? rawHeaders, IReadOnlyDictionary<string, string> vars)
     {
@@ -19,7 +19,7 @@ public sealed class HeaderParser(IVariableSubstitutor substitutor) : IHeaderPars
 
             string key = rawHeader.Substring(0, separatorIndex).Trim();
             string value = rawHeader.Substring(separatorIndex + 1).Trim();
-            string substitutedValue = substitutor.Substitute(value, vars);
+            string substitutedValue = VariableSubstitutor.Substitute(value, vars);
 
             if(string.IsNullOrEmpty(key) || string.IsNullOrEmpty(substitutedValue))
             {

@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
 using Jubeka.Core.Application;
 using Jubeka.Core.Application.Default;
 using Xunit;
@@ -8,7 +6,7 @@ namespace Jubeka.Core.Tests.Application.Default
 {
     public class HeaderParserTests
     {
-        IHeaderParser _parser = new HeaderParser(new VariableSubstitutor());
+        IHeaderParser _parser = new HeaderParser();
         [Fact]
         public void ValidHeaders_AreParsedCorrectly()
         {

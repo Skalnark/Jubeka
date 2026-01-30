@@ -1,8 +1,8 @@
 namespace Jubeka.Core.Application.Default;
 
-public class VariableSubstitutor : IVariableSubstitutor
+public static class VariableSubstitutor
 {
-    public string Substitute(string? input, IReadOnlyDictionary<string, string> vars)
+    public static string Substitute(string? input, IReadOnlyDictionary<string, string> vars)
     {
         if (string.IsNullOrEmpty(input) || vars.Count == 0)
         {

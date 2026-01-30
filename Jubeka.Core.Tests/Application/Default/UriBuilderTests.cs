@@ -6,8 +6,14 @@ namespace Jubeka.Core.Tests.Application.Default
 {
     public class UriBuilderTests
     {
-        IUriBuilderHelper _builder = new UriBuilderHelper(new VariableSubstitutor());
-        IQueryParser _parser = new QueryParser(new VariableSubstitutor());
+        IQueryParser _parser;
+        IUriBuilderHelper _builder;
+
+        public UriBuilderTests()
+        {
+            _parser = new QueryParser();
+            _builder = new UriBuilderHelper(_parser);
+        }
 
         [Fact]
         public void ValidUri_IsBuiltCorrectly()
