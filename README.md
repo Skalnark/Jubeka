@@ -99,6 +99,13 @@ dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
  env request edit --name dev
 ```
 
+Execute a stored request:
+
+```bash
+dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
+ env request exec --name dev --req-name Ping
+```
+
 ## YAML variables format
 
 ```yaml

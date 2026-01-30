@@ -280,4 +280,23 @@ public class ArgumentParserTests
         EnvSetOptions options = Assert.IsType<EnvSetOptions>(result.Options);
         Assert.Equal("dev", options.Name);
     }
+
+    [Fact]
+    public void Parse_EnvRequestExec_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "request",
+            "exec",
+            "--name", "dev",
+            "--req-name", "Ping"
+        ]);
+
+        Assert.Equal(CliCommand.EnvRequestExec, result.Command);
+        EnvRequestExecOptions options = Assert.IsType<EnvRequestExecOptions>(result.Options);
+        Assert.Equal("dev", options.EnvName);
+        Assert.Equal("Ping", options.RequestName);
+    }
 }

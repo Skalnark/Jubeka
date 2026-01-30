@@ -42,6 +42,7 @@ public sealed class Cli(
                 CliCommand.EnvRequestAdd => RunEnvRequestAdd((EnvRequestAddOptions)parseResult.Options),
                 CliCommand.EnvRequestList => RunEnvRequestList((EnvRequestListOptions)parseResult.Options),
                 CliCommand.EnvRequestEdit => RunEnvRequestEdit((EnvRequestEditOptions)parseResult.Options),
+                CliCommand.EnvRequestExec => await RunEnvRequestExecAsync((EnvRequestExecOptions)parseResult.Options, cancellationToken).ConfigureAwait(false),
                 CliCommand.EnvSet => RunEnvSet((EnvSetOptions)parseResult.Options),
                 _ => helpPrinter.Print("Unknown command.")
             };
@@ -339,6 +340,54 @@ public sealed class Cli(
         environmentConfigStore.Save(updated, Directory.GetCurrentDirectory());
         Console.WriteLine($"Request '{edited.Name}' updated in '{config.Name}'.");
         return 0;
+    }
+
+    private async Task<int> RunEnvRequestExecAsync(EnvRequestExecOptions options, CancellationToken cancellationToken)
+    {
+        string? envName = ResolveCurrentEnv(options.EnvName);
+        if (string.IsNullOrWhiteSpace(envName))
+        {
+            Console.Error.WriteLine("No environment selected. Use --name or set a current environment.");
+            return 1;
+        }
+
+        if (string.IsNullOrWhiteSpace(options.RequestName))
+        {
+            Console.Error.WriteLine("--req-name is required.");
+            return 1;
+        }
+
+        EnvironmentConfig? config = environmentConfigStore.Get(envName, Directory.GetCurrentDirectory());
+        if (config == null)
+        {
+            Console.Error.WriteLine($"Environment config not found: {envName}");
+            return 1;
+        }
+
+        int index = FindRequestIndexByName(config.Requests, options.RequestName);
+        if (index < 0)
+        {
+            Console.Error.WriteLine($"Request not found: {options.RequestName}");
+            return 1;
+        }
+
+        IReadOnlyDictionary<string, string> vars = LoadEnvVarsSafe(config.VarsPath);
+        RequestDefinition request = config.Requests[index];
+        RequestOptions requestOptions = new(
+            request.Method,
+            request.Url,
+            request.Body,
+            request.QueryParams.Select(q => $"{q.Key}={q.Value}").ToList(),
+            request.Headers);
+
+        RequestData requestData = requestDataBuilder.Build(requestOptions, vars);
+        ResponseData response = await HttpRequestExecutor.ExecuteAsync(
+            requestData,
+            TimeSpan.FromSeconds(100),
+            cancellationToken).ConfigureAwait(false);
+
+        responseWriter.Write(response, false);
+        return response.IsSuccessStatusCode ? 0 : 1;
     }
 
     private static int FindRequestIndexByName(IReadOnlyList<RequestDefinition> requests, string name)

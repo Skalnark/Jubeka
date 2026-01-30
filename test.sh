@@ -11,3 +11,5 @@
 ./out/jubeka-cli env request list
 
 ./out/jubeka-cli env request edit --inline --req-name dogs --method GET
+
+./out/jubeka-cli env request exec --req-name dogs

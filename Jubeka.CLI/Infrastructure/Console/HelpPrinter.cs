@@ -23,6 +23,7 @@ public sealed class HelpPrinter : IHelpPrinter
         System.Console.WriteLine("  jubeka env request add --name <ENV_NAME> [options]");
         System.Console.WriteLine("  jubeka env request list --name <ENV_NAME> [options]");
         System.Console.WriteLine("  jubeka env request edit --name <ENV_NAME> [options]");
+        System.Console.WriteLine("  jubeka env request exec --name <ENV_NAME> --req-name <REQUEST_NAME> [options]");
         System.Console.WriteLine();
         System.Console.WriteLine("Options:");
         System.Console.WriteLine("  -m, --method   HTTP method (GET, POST, PUT, PATCH, DELETE, etc.)");

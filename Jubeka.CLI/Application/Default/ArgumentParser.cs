@@ -239,11 +239,13 @@ public sealed class ArgumentParser : IArgumentParser
                     ? CliCommand.EnvRequestList
                     : action.Equals("request", StringComparison.OrdinalIgnoreCase) && args.Count > 1 && (args[1].Equals("edit", StringComparison.OrdinalIgnoreCase) || args[1].Equals("select", StringComparison.OrdinalIgnoreCase))
                         ? CliCommand.EnvRequestEdit
-                        : 0;
+                        : action.Equals("request", StringComparison.OrdinalIgnoreCase) && args.Count > 1 && args[1].Equals("exec", StringComparison.OrdinalIgnoreCase)
+                            ? CliCommand.EnvRequestExec
+                            : 0;
 
         if (command == 0)
         {
-            return ParseResult.Help("env command requires create, update, set, or request add/list/edit.");
+            return ParseResult.Help("env command requires create, update, set, or request add/list/edit/exec.");
         }
 
         string? name = null;
@@ -257,7 +259,7 @@ public sealed class ArgumentParser : IArgumentParser
         List<string> requestQueries = [];
         List<string> requestHeaders = [];
 
-        int startIndex = (command == CliCommand.EnvRequestAdd || command == CliCommand.EnvRequestList || command == CliCommand.EnvRequestEdit) ? 2 : 1;
+        int startIndex = (command == CliCommand.EnvRequestAdd || command == CliCommand.EnvRequestList || command == CliCommand.EnvRequestEdit || command == CliCommand.EnvRequestExec) ? 2 : 1;
 
         for (int i = startIndex; i < args.Count; i++)
         {
@@ -380,6 +382,12 @@ public sealed class ArgumentParser : IArgumentParser
                 requestQueries,
                 requestHeaders);
             return ParseResult.Success(CliCommand.EnvRequestEdit, editOptions);
+        }
+
+        if (command == CliCommand.EnvRequestExec)
+        {
+            EnvRequestExecOptions execOptions = new(name, requestName);
+            return ParseResult.Success(CliCommand.EnvRequestExec, execOptions);
         }
 
         if (command == CliCommand.EnvRequestAdd)
