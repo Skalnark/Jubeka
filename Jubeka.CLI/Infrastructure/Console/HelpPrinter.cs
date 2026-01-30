@@ -19,6 +19,7 @@ public sealed class HelpPrinter : IHelpPrinter
         System.Console.WriteLine("  jubeka openapi request --operation <OPERATION_ID> [options]");
         System.Console.WriteLine("  jubeka env create --name <NAME> --vars <PATH> [options]");
         System.Console.WriteLine("  jubeka env update --name <NAME> --vars <PATH> [options]");
+        System.Console.WriteLine("  jubeka env request add --name <ENV_NAME> [options]");
         System.Console.WriteLine();
         System.Console.WriteLine("Options:");
         System.Console.WriteLine("  -m, --method   HTTP method (GET, POST, PUT, PATCH, DELETE, etc.)");
@@ -36,6 +37,12 @@ public sealed class HelpPrinter : IHelpPrinter
         System.Console.WriteLine("  --env-name     Use named environment config");
         System.Console.WriteLine("  --name         Environment config name");
         System.Console.WriteLine("  --vars         YAML vars path for environment config");
+        System.Console.WriteLine("  --req-name     Request name (collection)");
+        System.Console.WriteLine("  --method       Request method (collection)");
+        System.Console.WriteLine("  --url          Request URL (collection)");
+        System.Console.WriteLine("  --body         Request body (collection)");
+        System.Console.WriteLine("  --query        Request query (collection, repeatable)");
+        System.Console.WriteLine("  --header       Request header (collection, repeatable)");
         System.Console.WriteLine("  --local        Save env config in ./.jubeka/");
         System.Console.WriteLine("  -h, --help     Show this help");
         System.Console.WriteLine();

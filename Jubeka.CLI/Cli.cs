@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jubeka.CLI.Application;
@@ -38,6 +39,7 @@ public sealed class Cli(
                 CliCommand.OpenApiRequest => await RunOpenApiRequestAsync((OpenApiCommandOptions)parseResult.Options, cancellationToken).ConfigureAwait(false),
                 CliCommand.EnvCreate => RunEnvCreate((EnvConfigOptions)parseResult.Options),
                 CliCommand.EnvUpdate => RunEnvUpdate((EnvConfigOptions)parseResult.Options),
+                CliCommand.EnvRequestAdd => RunEnvRequestAdd((EnvRequestAddOptions)parseResult.Options),
                 _ => helpPrinter.Print("Unknown command.")
             };
         }
@@ -141,9 +143,30 @@ public sealed class Cli(
 
     private int RunEnvUpdate(EnvConfigOptions options)
     {
-        EnvironmentConfig config = new(options.Name, options.VarsPath, options.DefaultOpenApiSource);
+        EnvironmentConfig? existing = environmentConfigStore.Get(options.Name, Directory.GetCurrentDirectory());
+        IReadOnlyList<RequestDefinition> requests = existing?.Requests ?? [];
+        EnvironmentConfig config = new(options.Name, options.VarsPath, options.DefaultOpenApiSource, requests);
         environmentConfigStore.Save(config, options.Local, Directory.GetCurrentDirectory());
         Console.WriteLine($"Environment '{config.Name}' updated.");
+        return 0;
+    }
+
+    private int RunEnvRequestAdd(EnvRequestAddOptions options)
+    {
+        EnvironmentConfig? config = environmentConfigStore.Get(options.EnvName, Directory.GetCurrentDirectory());
+        if (config == null)
+        {
+            Console.Error.WriteLine($"Environment config not found: {options.EnvName}");
+            return 1;
+        }
+
+        RequestDefinition request = BuildRequestDefinitionInteractively(options);
+        List<RequestDefinition> requests = config.Requests?.ToList() ?? [];
+        requests.Add(request);
+
+        EnvironmentConfig updated = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, requests);
+        environmentConfigStore.Save(updated, options.Local, Directory.GetCurrentDirectory());
+        Console.WriteLine($"Request '{request.Name}' added to '{config.Name}'.");
         return 0;
     }
 
@@ -152,7 +175,8 @@ public sealed class Cli(
         Console.WriteLine($"Starting env {action} wizard:");
 
         string name = PromptRequired("Name", options.Name);
-        string varsPath = PromptRequired("YAML vars path", options.VarsPath);
+        string varsDefault = string.IsNullOrWhiteSpace(options.VarsPath) ? $"{name}.yml" : options.VarsPath;
+        string varsPath = PromptWithDefault("YAML vars path", varsDefault);
 
         OpenApiSource? source = options.DefaultOpenApiSource;
         bool? setSpec = PromptYesNo("Set default OpenAPI spec?", source != null);
@@ -172,7 +196,64 @@ public sealed class Cli(
         }
 
         bool local = PromptYesNo("Save locally (./.jubeka)", options.Local) ?? options.Local;
-        return (new EnvironmentConfig(name, varsPath, source), local);
+        return (new EnvironmentConfig(name, varsPath, source, []), local);
+    }
+
+    private static RequestDefinition BuildRequestDefinitionInteractively(EnvRequestAddOptions options)
+    {
+        Console.WriteLine("Starting request add wizard:");
+
+        string name = PromptRequired("Request name", options.Name);
+        string method = PromptRequired("Method", options.Method ?? "GET");
+        string url = PromptRequired("URL", options.Url);
+        string? body = PromptOptional("Body (optional)", options.Body);
+
+        List<string> queries = options.QueryParams?.ToList() ?? [];
+        while (PromptYesNo("Add query param?", null) == true)
+        {
+            string q = PromptRequired("Query (key=value)", null);
+            queries.Add(q);
+        }
+
+        List<string> headers = options.Headers?.ToList() ?? [];
+        while (PromptYesNo("Add header?", null) == true)
+        {
+            string h = PromptRequired("Header (Name: Value)", null);
+            headers.Add(h);
+        }
+
+        return new RequestDefinition(name, method, url, body, queries, headers);
+    }
+
+    private static string PromptWithDefault(string label, string? defaultValue)
+    {
+        string prompt = string.IsNullOrWhiteSpace(defaultValue)
+            ? $"{label}: "
+            : $"{label} [{defaultValue}]: ";
+        Console.Write(prompt);
+        string? input = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return defaultValue ?? string.Empty;
+        }
+
+        return input.Trim();
+    }
+
+    private static string? PromptOptional(string label, string? defaultValue)
+    {
+        string prompt = string.IsNullOrWhiteSpace(defaultValue)
+            ? $"{label}: "
+            : $"{label} [{defaultValue}]: ";
+        Console.Write(prompt);
+        string? input = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return defaultValue;
+        }
+
+        return input.Trim();
     }
 
     private static string PromptRequired(string label, string? defaultValue)

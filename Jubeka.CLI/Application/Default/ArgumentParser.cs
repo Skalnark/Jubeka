@@ -231,19 +231,30 @@ public sealed class ArgumentParser : IArgumentParser
         string action = args[0];
         CliCommand command = action.Equals("create", StringComparison.OrdinalIgnoreCase)
             ? CliCommand.EnvCreate
-            : action.Equals("update", StringComparison.OrdinalIgnoreCase) ? CliCommand.EnvUpdate : 0;
+            : action.Equals("update", StringComparison.OrdinalIgnoreCase) ? CliCommand.EnvUpdate
+            : action.Equals("request", StringComparison.OrdinalIgnoreCase) && args.Count > 1 && args[1].Equals("add", StringComparison.OrdinalIgnoreCase)
+                ? CliCommand.EnvRequestAdd
+                : 0;
 
         if (command == 0)
         {
-            return ParseResult.Help("env command requires create or update.");
+            return ParseResult.Help("env command requires create, update, or request add.");
         }
 
         string? name = null;
         string? varsPath = null;
         OpenApiSource? source = null;
         bool local = false;
+        string? requestName = null;
+        string? requestMethod = null;
+        string? requestUrl = null;
+        string? requestBody = null;
+        List<string> requestQueries = [];
+        List<string> requestHeaders = [];
 
-        for (int i = 1; i < args.Count; i++)
+        int startIndex = command == CliCommand.EnvRequestAdd ? 2 : 1;
+
+        for (int i = startIndex; i < args.Count; i++)
         {
             string arg = args[i];
             switch (arg)
@@ -285,12 +296,73 @@ public sealed class ArgumentParser : IArgumentParser
                     }
                     source = new OpenApiSource(OpenApiSourceKind.Raw, rawValue);
                     break;
+                case "--req-name":
+                    if (!TryGetValue(args, ref i, out string? reqNameValue))
+                    {
+                        return ParseResult.Help($"Missing value for {arg}.");
+                    }
+                    requestName = reqNameValue;
+                    break;
+                case "--method":
+                    if (!TryGetValue(args, ref i, out string? reqMethodValue))
+                    {
+                        return ParseResult.Help($"Missing value for {arg}.");
+                    }
+                    requestMethod = reqMethodValue;
+                    break;
+                case "--url":
+                    if (!TryGetValue(args, ref i, out string? reqUrlValue))
+                    {
+                        return ParseResult.Help($"Missing value for {arg}.");
+                    }
+                    requestUrl = reqUrlValue;
+                    break;
+                case "--body":
+                    if (!TryGetValue(args, ref i, out string? reqBodyValue))
+                    {
+                        return ParseResult.Help($"Missing value for {arg}.");
+                    }
+                    requestBody = reqBodyValue;
+                    break;
+                case "--query":
+                    if (!TryGetValue(args, ref i, out string? reqQueryValue))
+                    {
+                        return ParseResult.Help($"Missing value for {arg}.");
+                    }
+                    requestQueries.Add(reqQueryValue);
+                    break;
+                case "--header":
+                    if (!TryGetValue(args, ref i, out string? reqHeaderValue))
+                    {
+                        return ParseResult.Help($"Missing value for {arg}.");
+                    }
+                    requestHeaders.Add(reqHeaderValue);
+                    break;
                 case "--local":
                     local = true;
                     break;
                 default:
                     return ParseResult.Help($"Unknown argument '{arg}'.");
             }
+        }
+
+        if (command == CliCommand.EnvRequestAdd)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return ParseResult.Help("--name is required.");
+            }
+
+            EnvRequestAddOptions requestOptions = new(
+                name,
+                local,
+                requestName,
+                requestMethod,
+                requestUrl,
+                requestBody,
+                requestQueries,
+                requestHeaders);
+            return ParseResult.Success(CliCommand.EnvRequestAdd, requestOptions);
         }
 
         if (command == CliCommand.EnvUpdate)

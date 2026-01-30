@@ -21,7 +21,8 @@ public class EnvironmentConfigStoreTests
             EnvironmentConfig config = new(
                 Name: "dev",
                 VarsPath: "/tmp/vars.yml",
-                DefaultOpenApiSource: new OpenApiSource(OpenApiSourceKind.Url, "https://example.com/openapi.json"));
+                DefaultOpenApiSource: new OpenApiSource(OpenApiSourceKind.Url, "https://example.com/openapi.json"),
+                Requests: []);
 
             store.Save(config);
             EnvironmentConfig? loaded = store.Get("dev");
@@ -30,6 +31,7 @@ public class EnvironmentConfigStoreTests
             Assert.Equal("dev", loaded!.Name);
             Assert.Equal("/tmp/vars.yml", loaded.VarsPath);
             Assert.NotNull(loaded.DefaultOpenApiSource);
+            Assert.NotNull(loaded.Requests);
         }
         finally
         {

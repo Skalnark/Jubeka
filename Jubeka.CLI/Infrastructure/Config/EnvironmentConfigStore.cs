@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Jubeka.CLI.Application;
@@ -21,7 +22,8 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
             if (File.Exists(localPath))
             {
                 string localJson = File.ReadAllText(localPath);
-                return JsonSerializer.Deserialize<EnvironmentConfig>(localJson, SerializerOptions);
+                EnvironmentConfig? localConfig = JsonSerializer.Deserialize<EnvironmentConfig>(localJson, SerializerOptions);
+                return Normalize(localConfig);
             }
         }
 
@@ -32,7 +34,8 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         }
 
         string json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<EnvironmentConfig>(json, SerializerOptions);
+        EnvironmentConfig? config = JsonSerializer.Deserialize<EnvironmentConfig>(json, SerializerOptions);
+        return Normalize(config);
     }
 
     public void Save(EnvironmentConfig config, bool local = false, string? baseDirectory = null)
@@ -46,6 +49,18 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
             : GetGlobalConfigPath(config.Name);
         string json = JsonSerializer.Serialize(config, SerializerOptions);
         File.WriteAllText(path, json);
+    }
+
+    private static EnvironmentConfig? Normalize(EnvironmentConfig? config)
+    {
+        if (config == null)
+        {
+            return null;
+        }
+
+        return config.Requests == null
+            ? new EnvironmentConfig(config.Name, config.VarsPath, config.DefaultOpenApiSource, new List<RequestDefinition>())
+            : config;
     }
 
     private static string GetGlobalConfigDirectory()

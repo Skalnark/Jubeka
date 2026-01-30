@@ -60,11 +60,22 @@ dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
  env create --name dev --vars env.yml --local
 ```
 
+If the wizard leaves the vars path empty, it defaults to `NAME.yml`. Default OpenAPI spec is optional.
+
 Use a named environment when invoking OpenAPI requests:
 
 ```bash
 dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
  openapi request --operation getPet --env-name dev
+```
+
+### Add requests to a collection
+
+Add a request to an environment's collection interactively:
+
+```bash
+dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
+ env request add --name dev
 ```
 
 ## YAML variables format

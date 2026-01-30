@@ -172,4 +172,32 @@ public class ArgumentParserTests
         EnvConfigOptions options = Assert.IsType<EnvConfigOptions>(result.Options);
         Assert.True(options.Local);
     }
+
+    [Fact]
+    public void Parse_EnvRequestAdd_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "request",
+            "add",
+            "--name", "dev",
+            "--req-name", "Ping",
+            "--method", "GET",
+            "--url", "https://example.com/ping",
+            "--query", "q=1",
+            "--header", "X-Test: v"
+        ]);
+
+        Assert.False(result.ShowHelp);
+        Assert.Equal(CliCommand.EnvRequestAdd, result.Command);
+        EnvRequestAddOptions options = Assert.IsType<EnvRequestAddOptions>(result.Options);
+        Assert.Equal("dev", options.EnvName);
+        Assert.Equal("Ping", options.Name);
+        Assert.Equal("GET", options.Method);
+        Assert.Equal("https://example.com/ping", options.Url);
+        Assert.Single(options.QueryParams);
+        Assert.Single(options.Headers);
+    }
 }
