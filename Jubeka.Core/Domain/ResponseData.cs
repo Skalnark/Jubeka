@@ -1,7 +1,9 @@
+using System.Net;
+
 namespace Jubeka.Core.Domain;
 
 public sealed record ResponseData(
-    uint StatusCode,
+    HttpStatusCode StatusCode,
     IReadOnlyList<(string Key, string Value)> Headers,
     IReadOnlyList<(string Key, string Value)> ContentHeaders,
     string Body,
