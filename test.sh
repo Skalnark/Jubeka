@@ -9,6 +9,8 @@ cleanup() {
 	rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
+trap 'echo "FAILED: ${current_test:-unknown}" >&2' ERR
+trap 'echo "INTERRUPTED: ${current_test:-unknown}" >&2; exit 130' INT
 
 assert_contains() {
 	local output="$1"
@@ -32,10 +34,18 @@ run_cmd() {
 	shift
 	local output
 	current_test="$label"
+	set +e
 	output=$("$@" 2>&1)
+	local status=$?
+	set -e
 	echo "[$label]"
 	echo "$output"
 	echo
+	if [[ $status -ne 0 ]]; then
+		echo "FAILED: $label" >&2
+		echo "$output" >&2
+		exit $status
+	fi
 	return_output="$output"
 }
 
