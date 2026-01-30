@@ -29,25 +29,13 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
     public EnvironmentConfig? Get(string name, string? baseDirectory = null)
     {
-        if (!string.IsNullOrWhiteSpace(baseDirectory))
-        {
-            string localDir = GetLocalEnvDirectory(baseDirectory, name);
-            EnvironmentConfig? local = LoadFromDirectory(localDir);
-            if (local != null)
-            {
-                return local;
-            }
-        }
-
         string globalDir = GetGlobalEnvDirectory(name);
         return LoadFromDirectory(globalDir);
     }
 
-    public void Save(EnvironmentConfig config, bool local = false, string? baseDirectory = null)
+    public void Save(EnvironmentConfig config, string? baseDirectory = null)
     {
-        string envDirectory = local
-            ? GetLocalEnvDirectory(baseDirectory ?? Directory.GetCurrentDirectory(), config.Name)
-            : GetGlobalEnvDirectory(config.Name);
+        string envDirectory = GetGlobalEnvDirectory(config.Name);
         Directory.CreateDirectory(envDirectory);
 
         string varsPath = WriteVarsFile(envDirectory, config.VarsPath);
@@ -68,47 +56,25 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
     public string? GetCurrent(string? baseDirectory = null)
     {
-        (string? Name, _) = GetCurrentInfo(baseDirectory);
-        return Name;
-    }
-
-    public void SetCurrent(string name, bool local = false, string? baseDirectory = null)
-    {
-        string directory = local
-            ? GetLocalConfigDirectory(baseDirectory ?? Directory.GetCurrentDirectory())
-            : GetGlobalConfigDirectory();
-        Directory.CreateDirectory(directory);
-
-        string path = local
-            ? GetLocalCurrentPath(baseDirectory ?? Directory.GetCurrentDirectory())
-            : GetGlobalCurrentPath();
-
-        string json = JsonSerializer.Serialize(new CurrentEnvironment(name), SerializerOptions);
-        File.WriteAllText(path, json);
-    }
-
-    public (string? Name, bool Local) GetCurrentInfo(string? baseDirectory = null)
-    {
-        if (!string.IsNullOrWhiteSpace(baseDirectory))
-        {
-            string localPath = GetLocalCurrentPath(baseDirectory);
-            if (File.Exists(localPath))
-            {
-                string json = File.ReadAllText(localPath);
-                CurrentEnvironment? current = JsonSerializer.Deserialize<CurrentEnvironment>(json, SerializerOptions);
-                return (current?.Name, true);
-            }
-        }
-
         string globalPath = GetGlobalCurrentPath();
         if (!File.Exists(globalPath))
         {
-            return (null, false);
+            return null;
         }
 
         string globalJson = File.ReadAllText(globalPath);
-        CurrentEnvironment? globalCurrent = JsonSerializer.Deserialize<CurrentEnvironment>(globalJson, SerializerOptions);
-        return (globalCurrent?.Name, false);
+        CurrentEnvironment? current = JsonSerializer.Deserialize<CurrentEnvironment>(globalJson, SerializerOptions);
+        return current?.Name;
+    }
+
+    public void SetCurrent(string name, string? baseDirectory = null)
+    {
+        string directory = GetGlobalConfigDirectory();
+        Directory.CreateDirectory(directory);
+
+        string path = GetGlobalCurrentPath();
+        string json = JsonSerializer.Serialize(new CurrentEnvironment(name), SerializerOptions);
+        File.WriteAllText(path, json);
     }
 
     private static EnvironmentConfig? LoadFromDirectory(string envDirectory)
@@ -272,19 +238,9 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         return Path.Combine(home, ".config", "jubeka");
     }
 
-    private static string GetLocalConfigDirectory(string baseDirectory)
-    {
-        return Path.Combine(baseDirectory, ".jubeka");
-    }
-
     private static string GetGlobalEnvDirectory(string name)
     {
         return Path.Combine(GetGlobalConfigDirectory(), name);
-    }
-
-    private static string GetLocalEnvDirectory(string baseDirectory, string name)
-    {
-        return Path.Combine(GetLocalConfigDirectory(baseDirectory), name);
     }
 
     private static string GetConfigPath(string envDirectory)
@@ -297,10 +253,6 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         return Path.Combine(GetGlobalConfigDirectory(), "current.json");
     }
 
-    private static string GetLocalCurrentPath(string baseDirectory)
-    {
-        return Path.Combine(GetLocalConfigDirectory(baseDirectory), "current.json");
-    }
 
     private sealed record CurrentEnvironment(string Name);
 

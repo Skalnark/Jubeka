@@ -84,16 +84,14 @@ public class CLITests
     private sealed class StubEnvironmentConfigStore : IEnvironmentConfigStore
     {
         public EnvironmentConfig? Get(string name, string? baseDirectory = null) => null;
-        public void Save(EnvironmentConfig config, bool local = false, string? baseDirectory = null)
+        public void Save(EnvironmentConfig config, string? baseDirectory = null)
         {
             throw new InvalidOperationException("Environment config store should not be called for help flow.");
         }
 
         public string? GetCurrent(string? baseDirectory = null) => null;
 
-        public (string? Name, bool Local) GetCurrentInfo(string? baseDirectory = null) => (null, false);
-
-        public void SetCurrent(string name, bool local = false, string? baseDirectory = null)
+        public void SetCurrent(string name, string? baseDirectory = null)
         {
             throw new InvalidOperationException("Environment config store should not be called for help flow.");
         }

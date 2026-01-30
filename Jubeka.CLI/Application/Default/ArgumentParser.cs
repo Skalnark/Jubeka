@@ -249,7 +249,6 @@ public sealed class ArgumentParser : IArgumentParser
         string? name = null;
         string? varsPath = null;
         OpenApiSource? source = null;
-        bool local = false;
         string? requestName = null;
         string? requestMethod = null;
         string? requestUrl = null;
@@ -343,9 +342,6 @@ public sealed class ArgumentParser : IArgumentParser
                     }
                     requestHeaders.Add(reqHeaderValue);
                     break;
-                case "--local":
-                    local = true;
-                    break;
                 default:
                     return ParseResult.Help($"Unknown argument '{arg}'.");
             }
@@ -358,19 +354,19 @@ public sealed class ArgumentParser : IArgumentParser
                 return ParseResult.Help("--name is required.");
             }
 
-            EnvSetOptions setOptions = new(name, local);
+            EnvSetOptions setOptions = new(name);
             return ParseResult.Success(CliCommand.EnvSet, setOptions);
         }
 
         if (command == CliCommand.EnvRequestList)
         {
-            EnvRequestListOptions listOptions = new(name, local);
+            EnvRequestListOptions listOptions = new(name);
             return ParseResult.Success(CliCommand.EnvRequestList, listOptions);
         }
 
         if (command == CliCommand.EnvRequestEdit)
         {
-            EnvRequestEditOptions editOptions = new(name, local, requestName);
+            EnvRequestEditOptions editOptions = new(name, requestName);
             return ParseResult.Success(CliCommand.EnvRequestEdit, editOptions);
         }
 
@@ -378,7 +374,6 @@ public sealed class ArgumentParser : IArgumentParser
         {
             EnvRequestAddOptions requestOptions = new(
                 name,
-                local,
                 requestName,
                 requestMethod,
                 requestUrl,
@@ -401,7 +396,7 @@ public sealed class ArgumentParser : IArgumentParser
             }
         }
 
-        EnvConfigOptions options = new(name ?? string.Empty, varsPath ?? string.Empty, source, local);
+        EnvConfigOptions options = new(name ?? string.Empty, varsPath ?? string.Empty, source);
         return ParseResult.Success(command, options);
     }
 

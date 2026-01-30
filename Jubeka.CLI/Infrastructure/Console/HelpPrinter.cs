@@ -46,7 +46,6 @@ public sealed class HelpPrinter : IHelpPrinter
         System.Console.WriteLine("  --body         Request body (collection)");
         System.Console.WriteLine("  --query        Request query (collection, repeatable)");
         System.Console.WriteLine("  --header       Request header (collection, repeatable)");
-        System.Console.WriteLine("  --local        Save env config in ./.jubeka/");
         System.Console.WriteLine("  -h, --help     Show this help");
         System.Console.WriteLine();
 

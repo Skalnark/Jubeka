@@ -1,6 +1,5 @@
 namespace Jubeka.CLI.Domain;
 
 public sealed record EnvSetOptions(
-    string Name,
-    bool Local
+    string Name
 );

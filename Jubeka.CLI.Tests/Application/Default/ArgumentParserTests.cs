@@ -153,24 +153,6 @@ public class ArgumentParserTests
         Assert.Equal("dev", options.Name);
         Assert.Equal("vars.yml", options.VarsPath);
         Assert.NotNull(options.DefaultOpenApiSource);
-        Assert.False(options.Local);
-    }
-
-    [Fact]
-    public void Parse_EnvCreate_WithLocalFlag_SetsLocal()
-    {
-        ArgumentParser parser = new();
-
-        ParseResult result = parser.Parse([
-            "env",
-            "create",
-            "--name", "dev",
-            "--vars", "vars.yml",
-            "--local"
-        ]);
-
-        EnvConfigOptions options = Assert.IsType<EnvConfigOptions>(result.Options);
-        Assert.True(options.Local);
     }
 
     [Fact]
@@ -210,14 +192,12 @@ public class ArgumentParserTests
             "env",
             "request",
             "list",
-            "--name", "dev",
-            "--local"
+            "--name", "dev"
         ]);
 
         Assert.Equal(CliCommand.EnvRequestList, result.Command);
         EnvRequestListOptions options = Assert.IsType<EnvRequestListOptions>(result.Options);
         Assert.Equal("dev", options.EnvName);
-        Assert.True(options.Local);
     }
 
     [Fact]
@@ -263,13 +243,11 @@ public class ArgumentParserTests
         ParseResult result = parser.Parse([
             "env",
             "set",
-            "--name", "dev",
-            "--local"
+            "--name", "dev"
         ]);
 
         Assert.Equal(CliCommand.EnvSet, result.Command);
         EnvSetOptions options = Assert.IsType<EnvSetOptions>(result.Options);
         Assert.Equal("dev", options.Name);
-        Assert.True(options.Local);
     }
 }

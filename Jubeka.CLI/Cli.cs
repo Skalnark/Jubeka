@@ -114,7 +114,7 @@ public sealed class Cli(
         string? envName = options.EnvName;
         if (string.IsNullOrWhiteSpace(envName))
         {
-            (envName, _) = ResolveCurrentEnv(null, false);
+            envName = ResolveCurrentEnv(null);
         }
 
         if (!string.IsNullOrWhiteSpace(envName))
@@ -151,25 +151,25 @@ public sealed class Cli(
             return 1;
         }
 
-        environmentConfigStore.SetCurrent(options.Name, options.Local, Directory.GetCurrentDirectory());
+        environmentConfigStore.SetCurrent(options.Name, Directory.GetCurrentDirectory());
         Console.WriteLine($"Current environment set to '{options.Name}'.");
         return 0;
     }
 
-    private (string? Name, bool Local) ResolveCurrentEnv(string? explicitName, bool localFlag)
+    private string? ResolveCurrentEnv(string? explicitName)
     {
         if (!string.IsNullOrWhiteSpace(explicitName))
         {
-            return (explicitName, localFlag);
+            return explicitName;
         }
 
-        return environmentConfigStore.GetCurrentInfo(Directory.GetCurrentDirectory());
+        return environmentConfigStore.GetCurrent(Directory.GetCurrentDirectory());
     }
 
     private int RunEnvCreate(EnvConfigOptions options)
     {
-        (EnvironmentConfig config, bool local) = BuildEnvironmentConfigInteractively(options, "create");
-        environmentConfigStore.Save(config, local, Directory.GetCurrentDirectory());
+        EnvironmentConfig config = BuildEnvironmentConfigInteractively(options, "create");
+        environmentConfigStore.Save(config, Directory.GetCurrentDirectory());
         Console.WriteLine($"Environment '{config.Name}' created.");
         return 0;
     }
@@ -179,14 +179,14 @@ public sealed class Cli(
         EnvironmentConfig? existing = environmentConfigStore.Get(options.Name, Directory.GetCurrentDirectory());
         IReadOnlyList<RequestDefinition> requests = existing?.Requests ?? [];
         EnvironmentConfig config = new(options.Name, options.VarsPath, options.DefaultOpenApiSource, requests);
-        environmentConfigStore.Save(config, options.Local, Directory.GetCurrentDirectory());
+        environmentConfigStore.Save(config, Directory.GetCurrentDirectory());
         Console.WriteLine($"Environment '{config.Name}' updated.");
         return 0;
     }
 
     private int RunEnvRequestAdd(EnvRequestAddOptions options)
     {
-        (string? envName, bool scopeLocal) = ResolveCurrentEnv(options.EnvName, options.Local);
+        string? envName = ResolveCurrentEnv(options.EnvName);
         if (string.IsNullOrWhiteSpace(envName))
         {
             Console.Error.WriteLine("No environment selected. Use --name or set a current environment.");
@@ -206,14 +206,14 @@ public sealed class Cli(
         requests.Add(request);
 
         EnvironmentConfig updated = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, requests);
-        environmentConfigStore.Save(updated, scopeLocal, Directory.GetCurrentDirectory());
+        environmentConfigStore.Save(updated, Directory.GetCurrentDirectory());
         Console.WriteLine($"Request '{request.Name}' added to '{config.Name}'.");
         return 0;
     }
 
     private int RunEnvRequestList(EnvRequestListOptions options)
     {
-        (string? envName, _) = ResolveCurrentEnv(options.EnvName, options.Local);
+        string? envName = ResolveCurrentEnv(options.EnvName);
         if (string.IsNullOrWhiteSpace(envName))
         {
             Console.Error.WriteLine("No environment selected. Use --name or set a current environment.");
@@ -244,7 +244,7 @@ public sealed class Cli(
 
     private int RunEnvRequestEdit(EnvRequestEditOptions options)
     {
-        (string? envName, bool scopeLocal) = ResolveCurrentEnv(options.EnvName, options.Local);
+        string? envName = ResolveCurrentEnv(options.EnvName);
         if (string.IsNullOrWhiteSpace(envName))
         {
             Console.Error.WriteLine("No environment selected. Use --name or set a current environment.");
@@ -277,12 +277,12 @@ public sealed class Cli(
         updatedRequests[index] = edited;
 
         EnvironmentConfig updated = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, updatedRequests);
-        environmentConfigStore.Save(updated, scopeLocal, Directory.GetCurrentDirectory());
+        environmentConfigStore.Save(updated, Directory.GetCurrentDirectory());
         Console.WriteLine($"Request '{edited.Name}' updated in '{config.Name}'.");
         return 0;
     }
 
-    private static (EnvironmentConfig Config, bool Local) BuildEnvironmentConfigInteractively(EnvConfigOptions options, string action)
+    private static EnvironmentConfig BuildEnvironmentConfigInteractively(EnvConfigOptions options, string action)
     {
         Console.WriteLine($"Starting env {action} wizard:");
 
@@ -307,8 +307,7 @@ public sealed class Cli(
             source = new OpenApiSource(kind, value);
         }
 
-        bool local = PromptYesNo("Save locally (./.jubeka)", options.Local) ?? options.Local;
-        return (new EnvironmentConfig(name, varsPath, source, []), local);
+        return new EnvironmentConfig(name, varsPath, source, []);
     }
 
     private static RequestDefinition BuildRequestDefinitionInteractively(EnvRequestAddOptions options, IReadOnlyDictionary<string, string> vars)

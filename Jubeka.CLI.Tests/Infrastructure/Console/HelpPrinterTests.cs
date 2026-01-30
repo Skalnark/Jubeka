@@ -29,7 +29,6 @@ public class HelpPrinterTests
             Assert.Contains("env request add", output.ToString());
             Assert.Contains("env request list", output.ToString());
             Assert.Contains("env request edit", output.ToString());
-            Assert.Contains("--local", output.ToString());
             Assert.Equal(string.Empty, error.ToString());
         }
         finally
