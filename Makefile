@@ -17,7 +17,7 @@ help:
 	@echo "\tmake publish PROJECT=Jubeka.CLI/Jubeka.CLI.csproj RUNTIME=linux-x64 PUBLISH_DIR=./out"
 
 build:
-	dotnet build $(PROJECT)
+	dotnet build $(PROJECT) -c Debug -r $(RUNTIME) -o $(PUBLISH_DIR)
 
 release:
 	dotnet publish $(PROJECT) -c $(CONFIG) -r $(RUNTIME) \

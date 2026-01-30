@@ -42,5 +42,49 @@ namespace Jubeka.Core.Tests.Application.Default
                 if (File.Exists(tmp)) File.Delete(tmp);
             }
         }
+
+        [Fact]
+        public void Build_MissingVariable_Throws()
+        {
+            BodyLoader bodyLoader = new();
+            HeaderParser headerParser = new();
+            QueryParser queryParser = new();
+            UriBuilderHelper uriBuilder = new(queryParser);
+
+            RequestDataBuilder builder = new(bodyLoader, headerParser, queryParser, uriBuilder);
+            RequestOptions options = new(
+                Method: "get",
+                Url: "https://example.test/api/{{id}}",
+                Body: null,
+                QueryParameters: ["q={{missing}}"],
+                Headers: ["X-Token: {{token}}"]
+            );
+
+            Dictionary<string, string> vars = new() { { "id", "100" } };
+            Assert.Throws<MissingEnvironmentVariableException>(() => builder.Build(options, vars));
+        }
+
+        [Fact]
+        public void Build_SubstitutesVariablesInBody()
+        {
+            BodyLoader bodyLoader = new();
+            HeaderParser headerParser = new();
+            QueryParser queryParser = new();
+            UriBuilderHelper uriBuilder = new(queryParser);
+
+            RequestDataBuilder builder = new(bodyLoader, headerParser, queryParser, uriBuilder);
+            RequestOptions options = new(
+                Method: "post",
+                Url: "https://example.test/api",
+                Body: "Hello {{name}}",
+                QueryParameters: null,
+                Headers: null
+            );
+
+            Dictionary<string, string> vars = new() { { "name", "World" } };
+            RequestData data = builder.Build(options, vars);
+
+            Assert.Equal("Hello World", data.Body);
+        }
     }
 }

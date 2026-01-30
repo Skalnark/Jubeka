@@ -16,6 +16,9 @@ public sealed class HelpPrinter : IHelpPrinter
         System.Console.WriteLine();
         System.Console.WriteLine("Usage:");
         System.Console.WriteLine("  jubeka request --method <VERB> --url <URL> [options]");
+        System.Console.WriteLine("  jubeka openapi request --operation <OPERATION_ID> [options]");
+        System.Console.WriteLine("  jubeka env create --name <NAME> --vars <PATH> [options]");
+        System.Console.WriteLine("  jubeka env update --name <NAME> --vars <PATH> [options]");
         System.Console.WriteLine();
         System.Console.WriteLine("Options:");
         System.Console.WriteLine("  -m, --method   HTTP method (GET, POST, PUT, PATCH, DELETE, etc.)");
@@ -23,8 +26,16 @@ public sealed class HelpPrinter : IHelpPrinter
         System.Console.WriteLine("  -b, --body     Request body string (use --body @path for file)");
         System.Console.WriteLine("  -q, --query    Query parameter (repeatable, format key=value)");
         System.Console.WriteLine("  -H, --header   Header (repeatable, format Name: Value)");
+        System.Console.WriteLine("  -e, --env      YAML file with variables for substitution");
         System.Console.WriteLine("  -t, --timeout  Timeout in seconds (default: 100)");
         System.Console.WriteLine("  --pretty       Pretty-print JSON response if possible");
+        System.Console.WriteLine("  --spec-url     OpenAPI spec URL");
+        System.Console.WriteLine("  --spec-file    OpenAPI spec file path");
+        System.Console.WriteLine("  --spec-raw     OpenAPI spec raw string");
+        System.Console.WriteLine("  --operation    OpenAPI operationId to invoke");
+        System.Console.WriteLine("  --env-name     Use named environment config");
+        System.Console.WriteLine("  --name         Environment config name");
+        System.Console.WriteLine("  --vars         YAML vars path for environment config");
         System.Console.WriteLine("  -h, --help     Show this help");
         System.Console.WriteLine();
 

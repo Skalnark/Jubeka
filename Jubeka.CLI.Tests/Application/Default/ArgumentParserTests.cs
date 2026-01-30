@@ -31,10 +31,12 @@ public class ArgumentParserTests
 
         Assert.False(result.ShowHelp);
         Assert.NotNull(result.Options);
-        Assert.Equal("GET", result.Options!.Method);
-        Assert.Equal("https://example.com", result.Options.Url);
-        Assert.Single(result.Options.QueryParams);
-        Assert.Single(result.Options.Headers);
+        Assert.Equal(CliCommand.Request, result.Command);
+        RequestCommandOptions options = Assert.IsType<RequestCommandOptions>(result.Options);
+        Assert.Equal("GET", options.Method);
+        Assert.Equal("https://example.com", options.Url);
+        Assert.Single(options.QueryParams);
+        Assert.Single(options.Headers);
     }
 
     [Fact]
@@ -52,10 +54,11 @@ public class ArgumentParserTests
 
         Assert.False(result.ShowHelp);
         Assert.NotNull(result.Options);
-        Assert.Equal("POST", result.Options!.Method);
-        Assert.Equal("https://example.com", result.Options.Url);
-        Assert.True(result.Options.Pretty);
-        Assert.Equal(2.5, result.Options.TimeoutSeconds);
+        RequestCommandOptions options = Assert.IsType<RequestCommandOptions>(result.Options);
+        Assert.Equal("POST", options.Method);
+        Assert.Equal("https://example.com", options.Url);
+        Assert.True(options.Pretty);
+        Assert.Equal(2.5, options.TimeoutSeconds);
     }
 
     [Fact]
@@ -108,5 +111,47 @@ public class ArgumentParserTests
 
         Assert.True(result.ShowHelp);
         Assert.Contains("Both --method and --url are required", result.Error);
+    }
+
+    [Fact]
+    public void Parse_OpenApiRequest_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "openapi",
+            "request",
+            "--operation", "getPet",
+            "--spec-url", "https://example.com/openapi.json",
+            "--env", "vars.yml"
+        ]);
+
+        Assert.False(result.ShowHelp);
+        Assert.Equal(CliCommand.OpenApiRequest, result.Command);
+        OpenApiCommandOptions options = Assert.IsType<OpenApiCommandOptions>(result.Options);
+        Assert.Equal("getPet", options.OperationId);
+        Assert.NotNull(options.Source);
+        Assert.Equal("vars.yml", options.EnvPath);
+    }
+
+    [Fact]
+    public void Parse_EnvCreate_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "create",
+            "--name", "dev",
+            "--vars", "vars.yml",
+            "--spec-file", "spec.yaml"
+        ]);
+
+        Assert.False(result.ShowHelp);
+        Assert.Equal(CliCommand.EnvCreate, result.Command);
+        EnvConfigOptions options = Assert.IsType<EnvConfigOptions>(result.Options);
+        Assert.Equal("dev", options.Name);
+        Assert.Equal("vars.yml", options.VarsPath);
+        Assert.NotNull(options.DefaultOpenApiSource);
     }
 }
