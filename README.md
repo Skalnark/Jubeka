@@ -53,6 +53,13 @@ dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
  env create --name dev --vars env.yml --spec-url https://example.com/openapi.yaml
 ```
 
+Create a local environment config (stored in `./.jubeka/NAME.json`):
+
+```bash
+dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
+ env create --name dev --vars env.yml --local
+```
+
 Use a named environment when invoking OpenAPI requests:
 
 ```bash

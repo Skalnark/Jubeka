@@ -241,6 +241,7 @@ public sealed class ArgumentParser : IArgumentParser
         string? name = null;
         string? varsPath = null;
         OpenApiSource? source = null;
+        bool local = false;
 
         for (int i = 1; i < args.Count; i++)
         {
@@ -284,22 +285,28 @@ public sealed class ArgumentParser : IArgumentParser
                     }
                     source = new OpenApiSource(OpenApiSourceKind.Raw, rawValue);
                     break;
+                case "--local":
+                    local = true;
+                    break;
                 default:
                     return ParseResult.Help($"Unknown argument '{arg}'.");
             }
         }
 
-        if (string.IsNullOrWhiteSpace(name))
+        if (command == CliCommand.EnvUpdate)
         {
-            return ParseResult.Help("--name is required.");
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return ParseResult.Help("--name is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(varsPath))
+            {
+                return ParseResult.Help("--vars is required.");
+            }
         }
 
-        if (string.IsNullOrWhiteSpace(varsPath))
-        {
-            return ParseResult.Help("--vars is required.");
-        }
-
-        EnvConfigOptions options = new(name, varsPath, source);
+        EnvConfigOptions options = new(name ?? string.Empty, varsPath ?? string.Empty, source, local);
         return ParseResult.Success(command, options);
     }
 

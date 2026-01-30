@@ -25,6 +25,7 @@ public class HelpPrinterTests
             Assert.Contains("Jubeka CLI", output.ToString());
             Assert.Contains("openapi request", output.ToString());
             Assert.Contains("env create", output.ToString());
+            Assert.Contains("--local", output.ToString());
             Assert.Equal(string.Empty, error.ToString());
         }
         finally

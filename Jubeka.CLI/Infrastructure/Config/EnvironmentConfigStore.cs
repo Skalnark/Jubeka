@@ -13,9 +13,19 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         WriteIndented = true
     };
 
-    public EnvironmentConfig? Get(string name)
+    public EnvironmentConfig? Get(string name, string? baseDirectory = null)
     {
-        string path = GetConfigPath(name);
+        if (!string.IsNullOrWhiteSpace(baseDirectory))
+        {
+            string localPath = GetLocalConfigPath(baseDirectory, name);
+            if (File.Exists(localPath))
+            {
+                string localJson = File.ReadAllText(localPath);
+                return JsonSerializer.Deserialize<EnvironmentConfig>(localJson, SerializerOptions);
+            }
+        }
+
+        string path = GetGlobalConfigPath(name);
         if (!File.Exists(path))
         {
             return null;
@@ -25,24 +35,39 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         return JsonSerializer.Deserialize<EnvironmentConfig>(json, SerializerOptions);
     }
 
-    public void Save(EnvironmentConfig config)
+    public void Save(EnvironmentConfig config, bool local = false, string? baseDirectory = null)
     {
-        string directory = GetConfigDirectory();
+        string directory = local
+            ? GetLocalConfigDirectory(baseDirectory ?? Directory.GetCurrentDirectory())
+            : GetGlobalConfigDirectory();
         Directory.CreateDirectory(directory);
-        string path = GetConfigPath(config.Name);
+        string path = local
+            ? GetLocalConfigPath(baseDirectory ?? Directory.GetCurrentDirectory(), config.Name)
+            : GetGlobalConfigPath(config.Name);
         string json = JsonSerializer.Serialize(config, SerializerOptions);
         File.WriteAllText(path, json);
     }
 
-    private static string GetConfigDirectory()
+    private static string GetGlobalConfigDirectory()
     {
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(home, ".config", "jubeka");
     }
 
-    private static string GetConfigPath(string name)
+    private static string GetGlobalConfigPath(string name)
     {
         string fileName = $"{name}.json";
-        return Path.Combine(GetConfigDirectory(), fileName);
+        return Path.Combine(GetGlobalConfigDirectory(), fileName);
+    }
+
+    private static string GetLocalConfigDirectory(string baseDirectory)
+    {
+        return Path.Combine(baseDirectory, ".jubeka");
+    }
+
+    private static string GetLocalConfigPath(string baseDirectory, string name)
+    {
+        string fileName = $"{name}.json";
+        return Path.Combine(GetLocalConfigDirectory(baseDirectory), fileName);
     }
 }

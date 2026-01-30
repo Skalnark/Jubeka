@@ -153,5 +153,23 @@ public class ArgumentParserTests
         Assert.Equal("dev", options.Name);
         Assert.Equal("vars.yml", options.VarsPath);
         Assert.NotNull(options.DefaultOpenApiSource);
+        Assert.False(options.Local);
+    }
+
+    [Fact]
+    public void Parse_EnvCreate_WithLocalFlag_SetsLocal()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "create",
+            "--name", "dev",
+            "--vars", "vars.yml",
+            "--local"
+        ]);
+
+        EnvConfigOptions options = Assert.IsType<EnvConfigOptions>(result.Options);
+        Assert.True(options.Local);
     }
 }

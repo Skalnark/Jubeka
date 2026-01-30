@@ -108,7 +108,7 @@ public sealed class Cli(
 
         if (!string.IsNullOrWhiteSpace(options.EnvName))
         {
-            EnvironmentConfig? config = environmentConfigStore.Get(options.EnvName);
+            EnvironmentConfig? config = environmentConfigStore.Get(options.EnvName, Directory.GetCurrentDirectory());
             if (config == null)
             {
                 throw new OpenApiSpecificationException($"Environment config not found: {options.EnvName}");
@@ -133,17 +133,84 @@ public sealed class Cli(
 
     private int RunEnvCreate(EnvConfigOptions options)
     {
-        EnvironmentConfig config = new(options.Name, options.VarsPath, options.DefaultOpenApiSource);
-        environmentConfigStore.Save(config);
-        Console.WriteLine($"Environment '{options.Name}' created.");
+        (EnvironmentConfig config, bool local) = BuildEnvironmentConfigInteractively(options, "create");
+        environmentConfigStore.Save(config, local, Directory.GetCurrentDirectory());
+        Console.WriteLine($"Environment '{config.Name}' created.");
         return 0;
     }
 
     private int RunEnvUpdate(EnvConfigOptions options)
     {
         EnvironmentConfig config = new(options.Name, options.VarsPath, options.DefaultOpenApiSource);
-        environmentConfigStore.Save(config);
-        Console.WriteLine($"Environment '{options.Name}' updated.");
+        environmentConfigStore.Save(config, options.Local, Directory.GetCurrentDirectory());
+        Console.WriteLine($"Environment '{config.Name}' updated.");
         return 0;
+    }
+
+    private static (EnvironmentConfig Config, bool Local) BuildEnvironmentConfigInteractively(EnvConfigOptions options, string action)
+    {
+        Console.WriteLine($"Starting env {action} wizard:");
+
+        string name = PromptRequired("Name", options.Name);
+        string varsPath = PromptRequired("YAML vars path", options.VarsPath);
+
+        OpenApiSource? source = options.DefaultOpenApiSource;
+        bool? setSpec = PromptYesNo("Set default OpenAPI spec?", source != null);
+        if (setSpec == true)
+        {
+            string kindInput = PromptRequired("Spec source (url|file|raw)", source?.Kind.ToString().ToLowerInvariant() ?? string.Empty);
+            OpenApiSourceKind kind = kindInput switch
+            {
+                "url" => OpenApiSourceKind.Url,
+                "file" => OpenApiSourceKind.File,
+                "raw" => OpenApiSourceKind.Raw,
+                _ => throw new OpenApiSpecificationException("Invalid spec source. Use url, file, or raw.")
+            };
+
+            string value = PromptRequired("Spec value", source?.Value ?? string.Empty);
+            source = new OpenApiSource(kind, value);
+        }
+
+        bool local = PromptYesNo("Save locally (./.jubeka)", options.Local) ?? options.Local;
+        return (new EnvironmentConfig(name, varsPath, source), local);
+    }
+
+    private static string PromptRequired(string label, string? defaultValue)
+    {
+        while (true)
+        {
+            string prompt = string.IsNullOrWhiteSpace(defaultValue)
+                ? $"{label}: "
+                : $"{label} [{defaultValue}]: ";
+            Console.Write(prompt);
+            string? input = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                if (!string.IsNullOrWhiteSpace(defaultValue))
+                {
+                    return defaultValue;
+                }
+
+                Console.WriteLine($"{label} is required.");
+                continue;
+            }
+
+            return input.Trim();
+        }
+    }
+
+    private static bool? PromptYesNo(string label, bool? defaultValue)
+    {
+        string suffix = defaultValue == true ? "[Y/n]" : defaultValue == false ? "[y/N]" : "[y/n]";
+        Console.Write($"{label} {suffix}: ");
+        string? input = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return defaultValue;
+        }
+
+        return input.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase);
     }
 }

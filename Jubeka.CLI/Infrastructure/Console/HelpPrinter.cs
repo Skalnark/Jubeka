@@ -36,6 +36,7 @@ public sealed class HelpPrinter : IHelpPrinter
         System.Console.WriteLine("  --env-name     Use named environment config");
         System.Console.WriteLine("  --name         Environment config name");
         System.Console.WriteLine("  --vars         YAML vars path for environment config");
+        System.Console.WriteLine("  --local        Save env config in ./.jubeka/");
         System.Console.WriteLine("  -h, --help     Show this help");
         System.Console.WriteLine();
 

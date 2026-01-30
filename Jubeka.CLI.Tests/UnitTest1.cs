@@ -5,7 +5,7 @@ using Jubeka.Core.Domain;
 
 namespace Jubeka.CLI.Tests;
 
-public class CLITests
+public class CliTests
 {
     [Fact]
     public async Task RunAsync_WhenHelpRequested_ReturnsHelpPrinterCode()
