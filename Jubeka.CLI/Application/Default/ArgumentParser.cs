@@ -268,6 +268,7 @@ public sealed class ArgumentParser : IArgumentParser
         string? requestUrl = null;
         string? requestBody = null;
         bool inline = false;
+        double timeoutSeconds = 100;
         List<string> requestQueries = [];
         List<string> requestHeaders = [];
 
@@ -360,6 +361,16 @@ public sealed class ArgumentParser : IArgumentParser
                     }
                     requestHeaders.Add(reqHeaderValue);
                     break;
+                case "-t" or "--timeout":
+                    if (!TryGetValue(args, ref i, out string? timeoutValue))
+                    {
+                        return ParseResult.Help($"Missing value for {arg}.");
+                    }
+                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out timeoutSeconds) || timeoutSeconds <= 0)
+                    {
+                        return ParseResult.Help("Invalid timeout. Use a positive number of seconds.");
+                    }
+                    break;
                 default:
                     return ParseResult.Help($"Unknown argument '{arg}'.");
             }
@@ -398,7 +409,7 @@ public sealed class ArgumentParser : IArgumentParser
 
         if (command == CliCommand.RequestExec)
         {
-            EnvRequestExecOptions execOptions = new(name, requestName);
+            EnvRequestExecOptions execOptions = new(name, requestName, timeoutSeconds);
             return ParseResult.Success(CliCommand.RequestExec, execOptions);
         }
 

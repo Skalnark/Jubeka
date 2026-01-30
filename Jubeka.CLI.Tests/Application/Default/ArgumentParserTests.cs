@@ -285,13 +285,15 @@ public class ArgumentParserTests
             "request",
             "exec",
             "--name", "dev",
-            "--req-name", "Ping"
+            "--req-name", "Ping",
+            "--timeout", "12"
         ]);
 
         Assert.Equal(CliCommand.RequestExec, result.Command);
         EnvRequestExecOptions options = Assert.IsType<EnvRequestExecOptions>(result.Options);
         Assert.Equal("dev", options.EnvName);
         Assert.Equal("Ping", options.RequestName);
+        Assert.Equal(12, options.TimeoutSeconds);
     }
 
     [Fact]

@@ -109,6 +109,10 @@ public sealed class Cli(
             cancellationToken).ConfigureAwait(false);
 
         responseWriter.Write(response, options.Pretty);
+        if (Console.IsOutputRedirected)
+        {
+            helpPrinter.Print();
+        }
         return response.IsSuccessStatusCode ? 0 : 1;
     }
 
@@ -415,7 +419,7 @@ public sealed class Cli(
         RequestData requestData = requestDataBuilder.Build(requestOptions, vars);
         ResponseData response = await HttpRequestExecutor.ExecuteAsync(
             requestData,
-            TimeSpan.FromSeconds(100),
+            TimeSpan.FromSeconds(options.TimeoutSeconds),
             cancellationToken).ConfigureAwait(false);
 
         responseWriter.Write(response, false);
@@ -877,8 +881,12 @@ public sealed class Cli(
         {
             return environmentVariablesLoader.Load(path);
         }
-        catch
+        catch (Exception ex)
         {
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                Console.Error.WriteLine($"Failed to load env vars from '{path}': {ex.Message}");
+            }
             return new Dictionary<string, string>();
         }
     }
