@@ -168,7 +168,25 @@ public sealed class Cli(
 
     private int RunEnvCreate(EnvConfigOptions options)
     {
-        EnvironmentConfig config = BuildEnvironmentConfigInteractively(options, "create");
+        EnvironmentConfig config;
+        if (HasEnvCreateInput(options))
+        {
+            if (string.IsNullOrWhiteSpace(options.Name))
+            {
+                Console.Error.WriteLine("--name is required when providing env create options.");
+                return 1;
+            }
+
+            string varsPath = string.IsNullOrWhiteSpace(options.VarsPath)
+                ? $"{options.Name}.yml"
+                : options.VarsPath;
+            config = new EnvironmentConfig(options.Name, varsPath, options.DefaultOpenApiSource, []);
+        }
+        else
+        {
+            config = BuildEnvironmentConfigInteractively(options, "create");
+        }
+
         environmentConfigStore.Save(config, Directory.GetCurrentDirectory());
         Console.WriteLine($"Environment '{config.Name}' created.");
         return 0;
@@ -201,7 +219,24 @@ public sealed class Cli(
         }
 
         IReadOnlyDictionary<string, string> vars = LoadEnvVarsSafe(config.VarsPath);
-        RequestDefinition request = BuildRequestDefinitionInteractively(options, vars);
+        RequestDefinition request;
+        if (HasRequestAddInput(options))
+        {
+            if (string.IsNullOrWhiteSpace(options.Name) || string.IsNullOrWhiteSpace(options.Url))
+            {
+                Console.Error.WriteLine("--req-name and --url are required when providing request options.");
+                return 1;
+            }
+
+            string method = string.IsNullOrWhiteSpace(options.Method) ? "GET" : options.Method;
+            List<QueryParamDefinition> queries = NormalizeQueryParams(options.QueryParams);
+            List<string> headers = options.Headers?.ToList() ?? [];
+            request = new RequestDefinition(options.Name, method, options.Url, options.Body, queries, headers, new AuthConfig(AuthMethod.Inherit));
+        }
+        else
+        {
+            request = BuildRequestDefinitionInteractively(options, vars);
+        }
         List<RequestDefinition> requests = config.Requests?.ToList() ?? [];
         requests.Add(request);
 
@@ -308,6 +343,23 @@ public sealed class Cli(
         }
 
         return new EnvironmentConfig(name, varsPath, source, []);
+    }
+
+    private static bool HasEnvCreateInput(EnvConfigOptions options)
+    {
+        return !string.IsNullOrWhiteSpace(options.Name)
+               || !string.IsNullOrWhiteSpace(options.VarsPath)
+               || options.DefaultOpenApiSource != null;
+    }
+
+    private static bool HasRequestAddInput(EnvRequestAddOptions options)
+    {
+        return !string.IsNullOrWhiteSpace(options.Name)
+               || !string.IsNullOrWhiteSpace(options.Method)
+               || !string.IsNullOrWhiteSpace(options.Url)
+               || !string.IsNullOrWhiteSpace(options.Body)
+               || (options.QueryParams?.Count ?? 0) > 0
+               || (options.Headers?.Count ?? 0) > 0;
     }
 
     private static RequestDefinition BuildRequestDefinitionInteractively(EnvRequestAddOptions options, IReadOnlyDictionary<string, string> vars)
