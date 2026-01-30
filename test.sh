@@ -4,29 +4,53 @@ set -euo pipefail
 CLI="./out/jubeka-cli"
 TMP_DIR="$(mktemp -d)"
 ENV_NAME="TestEnv-$RANDOM"
+QUIET=0
+
+for arg in "$@"; do
+	if [[ "$arg" == "--quiet" ]]; then
+		QUIET=1
+		break
+	fi
+done
+
+print_if_not_quiet() {
+	if [[ $QUIET -eq 0 ]]; then
+		echo "$@"
+	fi
+}
+
+print_fail() {
+	echo "FAILED: ${current_test:-unknown}" >&2
+}
 
 cleanup() {
 	rm -rf "$TMP_DIR"
+	rm -rf "$HOME/.config/jubeka/$ENV_NAME"
 }
 trap cleanup EXIT
-trap 'echo "FAILED: ${current_test:-unknown}" >&2' ERR
-trap 'echo "INTERRUPTED: ${current_test:-unknown}" >&2; exit 130' INT
+trap 'print_fail' ERR
+trap 'if [[ $QUIET -eq 1 ]]; then print_fail; else echo "INTERRUPTED: ${current_test:-unknown}" >&2; fi; exit 130' INT
 
 assert_contains() {
 	local output="$1"
 	local expected="$2"
 	if ! grep -Fq "$expected" <<<"$output"; then
-		echo "Expected output to contain: $expected" >&2
-		echo "Actual output:" >&2
-		echo "$output" >&2
+		if [[ $QUIET -eq 0 ]]; then
+			echo "Expected output to contain: $expected" >&2
+			echo "Actual output:" >&2
+			echo "$output" >&2
+		fi
+		print_fail
 		exit 1
 	fi
-	if [[ -n "${current_test:-}" ]]; then
-		echo "running $current_test"
-	else
-		echo "running"
+	if [[ $QUIET -eq 0 ]]; then
+		if [[ -n "${current_test:-}" ]]; then
+			echo "running $current_test"
+		else
+			echo "running"
+		fi
 	fi
-	echo "PASS: $expected"
+	echo "PASS: ${current_test:-unknown}"
 }
 
 run_cmd() {
@@ -38,12 +62,16 @@ run_cmd() {
 	output=$("$@" 2>&1)
 	local status=$?
 	set -e
-	echo "[$label]"
-	echo "$output"
-	echo
+	print_if_not_quiet "[$label]"
+	print_if_not_quiet "$output"
+	print_if_not_quiet ""
 	if [[ $status -ne 0 ]]; then
-		echo "FAILED: $label" >&2
-		echo "$output" >&2
+		if [[ $QUIET -eq 0 ]]; then
+			echo "FAILED: $label" >&2
+			echo "$output" >&2
+		else
+			echo "FAILED: $label" >&2
+		fi
 		exit $status
 	fi
 	return_output="$output"
@@ -105,6 +133,7 @@ assert_contains "$return_output" "HTTP 200"
 run_cmd "openapi request" "$CLI" openapi request --operation listBreeds --spec-file "$TMP_DIR/openapi.yaml" --env "$TMP_DIR/vars.yml" --timeout 30
 assert_contains "$return_output" "HTTP 200"
 
+run_cmd "help" "$CLI" -h
 assert_contains "$return_output" "request add"
 assert_contains "$return_output" "request edit"
 assert_contains "$return_output" "request exec"

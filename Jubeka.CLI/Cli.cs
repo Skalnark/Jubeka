@@ -109,10 +109,6 @@ public sealed class Cli(
             cancellationToken).ConfigureAwait(false);
 
         responseWriter.Write(response, options.Pretty);
-        if (Console.IsOutputRedirected)
-        {
-            helpPrinter.Print();
-        }
         return response.IsSuccessStatusCode ? 0 : 1;
     }
 
