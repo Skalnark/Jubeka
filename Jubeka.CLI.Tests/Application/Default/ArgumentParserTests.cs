@@ -156,12 +156,11 @@ public class ArgumentParserTests
     }
 
     [Fact]
-    public void Parse_EnvRequestAdd_ParsesOptions()
+    public void Parse_RequestAdd_ParsesOptions()
     {
         ArgumentParser parser = new();
 
         ParseResult result = parser.Parse([
-            "env",
             "request",
             "add",
             "--name", "dev",
@@ -173,7 +172,7 @@ public class ArgumentParserTests
         ]);
 
         Assert.False(result.ShowHelp);
-        Assert.Equal(CliCommand.EnvRequestAdd, result.Command);
+        Assert.Equal(CliCommand.RequestAdd, result.Command);
         EnvRequestAddOptions options = Assert.IsType<EnvRequestAddOptions>(result.Options);
         Assert.Equal("dev", options.EnvName);
         Assert.Equal("Ping", options.Name);
@@ -184,36 +183,34 @@ public class ArgumentParserTests
     }
 
     [Fact]
-    public void Parse_EnvRequestList_ParsesOptions()
+    public void Parse_RequestList_ParsesOptions()
     {
         ArgumentParser parser = new();
 
         ParseResult result = parser.Parse([
-            "env",
             "request",
             "list",
             "--name", "dev"
         ]);
 
-        Assert.Equal(CliCommand.EnvRequestList, result.Command);
+        Assert.Equal(CliCommand.RequestList, result.Command);
         EnvRequestListOptions options = Assert.IsType<EnvRequestListOptions>(result.Options);
         Assert.Equal("dev", options.EnvName);
     }
 
     [Fact]
-    public void Parse_EnvRequestEdit_ParsesOptions()
+    public void Parse_RequestEdit_ParsesOptions()
     {
         ArgumentParser parser = new();
 
         ParseResult result = parser.Parse([
-            "env",
             "request",
             "edit",
             "--name", "dev",
             "--req-name", "Ping"
         ]);
 
-        Assert.Equal(CliCommand.EnvRequestEdit, result.Command);
+        Assert.Equal(CliCommand.RequestEdit, result.Command);
         EnvRequestEditOptions options = Assert.IsType<EnvRequestEditOptions>(result.Options);
         Assert.Equal("dev", options.EnvName);
         Assert.Equal("Ping", options.RequestName);
@@ -221,12 +218,11 @@ public class ArgumentParserTests
     }
 
     [Fact]
-    public void Parse_EnvRequestEdit_WithInline_ParsesOptions()
+    public void Parse_RequestEdit_WithInline_ParsesOptions()
     {
         ArgumentParser parser = new();
 
         ParseResult result = parser.Parse([
-            "env",
             "request",
             "edit",
             "--req-name", "Ping",
@@ -238,7 +234,7 @@ public class ArgumentParserTests
             "--header", "X-Test: v"
         ]);
 
-        Assert.Equal(CliCommand.EnvRequestEdit, result.Command);
+        Assert.Equal(CliCommand.RequestEdit, result.Command);
         EnvRequestEditOptions options = Assert.IsType<EnvRequestEditOptions>(result.Options);
         Assert.Equal("Ping", options.RequestName);
         Assert.True(options.Inline);
@@ -250,17 +246,16 @@ public class ArgumentParserTests
     }
 
     [Fact]
-    public void Parse_EnvRequestList_WithoutName_AllowsCurrent()
+    public void Parse_RequestList_WithoutName_AllowsCurrent()
     {
         ArgumentParser parser = new();
 
         ParseResult result = parser.Parse([
-            "env",
             "request",
             "list"
         ]);
 
-        Assert.Equal(CliCommand.EnvRequestList, result.Command);
+        Assert.Equal(CliCommand.RequestList, result.Command);
         EnvRequestListOptions options = Assert.IsType<EnvRequestListOptions>(result.Options);
         Assert.Null(options.EnvName);
     }
@@ -282,21 +277,42 @@ public class ArgumentParserTests
     }
 
     [Fact]
-    public void Parse_EnvRequestExec_ParsesOptions()
+    public void Parse_RequestExec_ParsesOptions()
     {
         ArgumentParser parser = new();
 
         ParseResult result = parser.Parse([
-            "env",
             "request",
             "exec",
             "--name", "dev",
             "--req-name", "Ping"
         ]);
 
-        Assert.Equal(CliCommand.EnvRequestExec, result.Command);
+        Assert.Equal(CliCommand.RequestExec, result.Command);
         EnvRequestExecOptions options = Assert.IsType<EnvRequestExecOptions>(result.Options);
         Assert.Equal("dev", options.EnvName);
         Assert.Equal("Ping", options.RequestName);
+    }
+
+    [Fact]
+    public void Parse_EnvEdit_WithInline_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "edit",
+            "--name", "dev",
+            "--inline",
+            "--vars", "vars.yml",
+            "--spec-url", "https://example.com/openapi.yaml"
+        ]);
+
+        Assert.Equal(CliCommand.EnvEdit, result.Command);
+        EnvEditOptions options = Assert.IsType<EnvEditOptions>(result.Options);
+        Assert.Equal("dev", options.Name);
+        Assert.True(options.Inline);
+        Assert.Equal("vars.yml", options.VarsPath);
+        Assert.NotNull(options.DefaultOpenApiSource);
     }
 }

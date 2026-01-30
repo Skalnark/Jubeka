@@ -26,6 +26,11 @@ public sealed class ArgumentParser : IArgumentParser
             return ParseOpenApi(args.Skip(1).ToArray());
         }
 
+        if (IsRequestCommand(args[0]) && args.Length > 1 && IsRequestCollectionAction(args[1]))
+        {
+            return ParseEnv(args);
+        }
+
         List<string> filteredArgs = [.. args];
         if (filteredArgs.Count > 0 && IsRequestCommand(filteredArgs[0]))
         {
@@ -42,6 +47,12 @@ public sealed class ArgumentParser : IArgumentParser
 
     private static bool IsEnvCommand(string value) =>
         value.Equals("env", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsRequestCollectionAction(string value) =>
+        value.Equals("add", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("list", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("edit", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("exec", StringComparison.OrdinalIgnoreCase);
 
     private static ParseResult ParseRequest(IReadOnlyList<string> args)
     {
@@ -225,27 +236,28 @@ public sealed class ArgumentParser : IArgumentParser
     {
         if (args.Count == 0)
         {
-            return ParseResult.Help("env command requires create or update.");
+            return ParseResult.Help("env command requires create, update, or edit.");
         }
 
         string action = args[0];
         CliCommand command = action.Equals("create", StringComparison.OrdinalIgnoreCase)
             ? CliCommand.EnvCreate
             : action.Equals("update", StringComparison.OrdinalIgnoreCase) ? CliCommand.EnvUpdate
+            : action.Equals("edit", StringComparison.OrdinalIgnoreCase) ? CliCommand.EnvEdit
             : action.Equals("set", StringComparison.OrdinalIgnoreCase) ? CliCommand.EnvSet
             : action.Equals("request", StringComparison.OrdinalIgnoreCase) && args.Count > 1 && args[1].Equals("add", StringComparison.OrdinalIgnoreCase)
-                ? CliCommand.EnvRequestAdd
+                ? CliCommand.RequestAdd
                 : action.Equals("request", StringComparison.OrdinalIgnoreCase) && args.Count > 1 && args[1].Equals("list", StringComparison.OrdinalIgnoreCase)
-                    ? CliCommand.EnvRequestList
+                    ? CliCommand.RequestList
                     : action.Equals("request", StringComparison.OrdinalIgnoreCase) && args.Count > 1 && (args[1].Equals("edit", StringComparison.OrdinalIgnoreCase) || args[1].Equals("select", StringComparison.OrdinalIgnoreCase))
-                        ? CliCommand.EnvRequestEdit
+                        ? CliCommand.RequestEdit
                         : action.Equals("request", StringComparison.OrdinalIgnoreCase) && args.Count > 1 && args[1].Equals("exec", StringComparison.OrdinalIgnoreCase)
-                            ? CliCommand.EnvRequestExec
+                            ? CliCommand.RequestExec
                             : 0;
 
         if (command == 0)
         {
-            return ParseResult.Help("env command requires create, update, set, or request add/list/edit/exec.");
+            return ParseResult.Help("env command requires create, update, edit, set, or request add/list/edit/exec.");
         }
 
         string? name = null;
@@ -255,11 +267,11 @@ public sealed class ArgumentParser : IArgumentParser
         string? requestMethod = null;
         string? requestUrl = null;
         string? requestBody = null;
-        bool requestInline = false;
+        bool inline = false;
         List<string> requestQueries = [];
         List<string> requestHeaders = [];
 
-        int startIndex = (command == CliCommand.EnvRequestAdd || command == CliCommand.EnvRequestList || command == CliCommand.EnvRequestEdit || command == CliCommand.EnvRequestExec) ? 2 : 1;
+        int startIndex = (command == CliCommand.RequestAdd || command == CliCommand.RequestList || command == CliCommand.RequestEdit || command == CliCommand.RequestExec) ? 2 : 1;
 
         for (int i = startIndex; i < args.Count; i++)
         {
@@ -311,7 +323,7 @@ public sealed class ArgumentParser : IArgumentParser
                     requestName = reqNameValue;
                     break;
                 case "--inline":
-                    requestInline = true;
+                    inline = true;
                     break;
                 case "--method":
                     if (!TryGetValue(args, ref i, out string? reqMethodValue))
@@ -364,33 +376,33 @@ public sealed class ArgumentParser : IArgumentParser
             return ParseResult.Success(CliCommand.EnvSet, setOptions);
         }
 
-        if (command == CliCommand.EnvRequestList)
+        if (command == CliCommand.RequestList)
         {
             EnvRequestListOptions listOptions = new(name);
-            return ParseResult.Success(CliCommand.EnvRequestList, listOptions);
+            return ParseResult.Success(CliCommand.RequestList, listOptions);
         }
 
-        if (command == CliCommand.EnvRequestEdit)
+        if (command == CliCommand.RequestEdit)
         {
             EnvRequestEditOptions editOptions = new(
                 name,
                 requestName,
-                requestInline,
+                inline,
                 requestMethod,
                 requestUrl,
                 requestBody,
                 requestQueries,
                 requestHeaders);
-            return ParseResult.Success(CliCommand.EnvRequestEdit, editOptions);
+            return ParseResult.Success(CliCommand.RequestEdit, editOptions);
         }
 
-        if (command == CliCommand.EnvRequestExec)
+        if (command == CliCommand.RequestExec)
         {
             EnvRequestExecOptions execOptions = new(name, requestName);
-            return ParseResult.Success(CliCommand.EnvRequestExec, execOptions);
+            return ParseResult.Success(CliCommand.RequestExec, execOptions);
         }
 
-        if (command == CliCommand.EnvRequestAdd)
+        if (command == CliCommand.RequestAdd)
         {
             EnvRequestAddOptions requestOptions = new(
                 name,
@@ -400,7 +412,18 @@ public sealed class ArgumentParser : IArgumentParser
                 requestBody,
                 requestQueries,
                 requestHeaders);
-            return ParseResult.Success(CliCommand.EnvRequestAdd, requestOptions);
+            return ParseResult.Success(CliCommand.RequestAdd, requestOptions);
+        }
+
+        if (command == CliCommand.EnvEdit)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return ParseResult.Help("--name is required.");
+            }
+
+            EnvEditOptions editOptions = new(name, varsPath, source, inline);
+            return ParseResult.Success(CliCommand.EnvEdit, editOptions);
         }
 
         if (command == CliCommand.EnvUpdate)

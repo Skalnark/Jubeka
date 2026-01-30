@@ -36,9 +36,14 @@ public sealed class Cli(
             return parseResult.Command switch
             {
                 CliCommand.Request => await RunRequestAsync((RequestCommandOptions)parseResult.Options, cancellationToken).ConfigureAwait(false),
+                CliCommand.RequestAdd => RunEnvRequestAdd((EnvRequestAddOptions)parseResult.Options),
+                CliCommand.RequestList => RunEnvRequestList((EnvRequestListOptions)parseResult.Options),
+                CliCommand.RequestEdit => RunEnvRequestEdit((EnvRequestEditOptions)parseResult.Options),
+                CliCommand.RequestExec => await RunEnvRequestExecAsync((EnvRequestExecOptions)parseResult.Options, cancellationToken).ConfigureAwait(false),
                 CliCommand.OpenApiRequest => await RunOpenApiRequestAsync((OpenApiCommandOptions)parseResult.Options, cancellationToken).ConfigureAwait(false),
                 CliCommand.EnvCreate => RunEnvCreate((EnvConfigOptions)parseResult.Options),
                 CliCommand.EnvUpdate => RunEnvUpdate((EnvConfigOptions)parseResult.Options),
+                CliCommand.EnvEdit => RunEnvEdit((EnvEditOptions)parseResult.Options),
                 CliCommand.EnvRequestAdd => RunEnvRequestAdd((EnvRequestAddOptions)parseResult.Options),
                 CliCommand.EnvRequestList => RunEnvRequestList((EnvRequestListOptions)parseResult.Options),
                 CliCommand.EnvRequestEdit => RunEnvRequestEdit((EnvRequestEditOptions)parseResult.Options),
@@ -200,6 +205,33 @@ public sealed class Cli(
         EnvironmentConfig config = new(options.Name, options.VarsPath, options.DefaultOpenApiSource, requests);
         environmentConfigStore.Save(config, Directory.GetCurrentDirectory());
         Console.WriteLine($"Environment '{config.Name}' updated.");
+        return 0;
+    }
+
+    private int RunEnvEdit(EnvEditOptions options)
+    {
+        EnvironmentConfig? existing = environmentConfigStore.Get(options.Name, Directory.GetCurrentDirectory());
+        if (existing == null)
+        {
+            Console.Error.WriteLine($"Environment config not found: {options.Name}");
+            return 1;
+        }
+
+        if (options.Inline)
+        {
+            string varsPath = string.IsNullOrWhiteSpace(options.VarsPath) ? existing.VarsPath : options.VarsPath;
+            OpenApiSource? source = options.DefaultOpenApiSource ?? existing.DefaultOpenApiSource;
+            EnvironmentConfig updated = new(options.Name, varsPath, source, existing.Requests);
+            environmentConfigStore.Save(updated, Directory.GetCurrentDirectory());
+            Console.WriteLine($"Environment '{updated.Name}' updated.");
+            return 0;
+        }
+
+        EnvConfigOptions wizardOptions = new(options.Name, existing.VarsPath, existing.DefaultOpenApiSource);
+        EnvironmentConfig wizardConfig = BuildEnvironmentConfigInteractively(wizardOptions, "edit");
+        EnvironmentConfig result = new(wizardConfig.Name, wizardConfig.VarsPath, wizardConfig.DefaultOpenApiSource, existing.Requests);
+        environmentConfigStore.Save(result, Directory.GetCurrentDirectory());
+        Console.WriteLine($"Environment '{result.Name}' updated.");
         return 0;
     }
 

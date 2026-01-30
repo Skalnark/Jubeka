@@ -53,6 +53,20 @@ dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
  env create --name dev --vars env.yml --spec-url https://example.com/openapi.yaml
 ```
 
+Edit an environment configuration (wizard):
+
+```bash
+dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
+ env edit --name dev
+```
+
+Edit an environment configuration inline:
+
+```bash
+dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
+ env edit --name dev --inline --vars env.yml
+```
+
 Set the current environment (so you can omit `--name` in env commands):
 
 ```bash
@@ -75,35 +89,35 @@ Add a request to an environment's collection interactively:
 
 ```bash
 dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- env request add --name dev
+ request add --name dev
 ```
 
 If you set a current environment, you can omit `--name`:
 
 ```bash
 dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- env request add
+ request add
 ```
 
 List requests in a collection:
 
 ```bash
 dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- env request list --name dev
+ request list --name dev
 ```
 
 Edit a request from the list:
 
 ```bash
 dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- env request edit --name dev
+ request edit --name dev
 ```
 
 Execute a stored request:
 
 ```bash
 dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- env request exec --name dev --req-name Ping
+ request exec --name dev --req-name Ping
 ```
 
 ## YAML variables format

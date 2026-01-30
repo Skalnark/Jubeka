@@ -16,14 +16,15 @@ public sealed class HelpPrinter : IHelpPrinter
         System.Console.WriteLine();
         System.Console.WriteLine("Usage:");
         System.Console.WriteLine("  jubeka request --method <VERB> --url <URL> [options]");
+        System.Console.WriteLine("  jubeka request add --name <ENV_NAME> [options]");
+        System.Console.WriteLine("  jubeka request list --name <ENV_NAME> [options]");
+        System.Console.WriteLine("  jubeka request edit --name <ENV_NAME> [options]");
+        System.Console.WriteLine("  jubeka request exec --name <ENV_NAME> --req-name <REQUEST_NAME> [options]");
         System.Console.WriteLine("  jubeka openapi request --operation <OPERATION_ID> [options]");
         System.Console.WriteLine("  jubeka env create --name <NAME> --vars <PATH> [options]");
         System.Console.WriteLine("  jubeka env update --name <NAME> --vars <PATH> [options]");
+        System.Console.WriteLine("  jubeka env edit --name <NAME> [options]");
         System.Console.WriteLine("  jubeka env set --name <NAME> [options]");
-        System.Console.WriteLine("  jubeka env request add --name <ENV_NAME> [options]");
-        System.Console.WriteLine("  jubeka env request list --name <ENV_NAME> [options]");
-        System.Console.WriteLine("  jubeka env request edit --name <ENV_NAME> [options]");
-        System.Console.WriteLine("  jubeka env request exec --name <ENV_NAME> --req-name <REQUEST_NAME> [options]");
         System.Console.WriteLine();
         System.Console.WriteLine("Options:");
         System.Console.WriteLine("  -m, --method   HTTP method (GET, POST, PUT, PATCH, DELETE, etc.)");
@@ -47,7 +48,7 @@ public sealed class HelpPrinter : IHelpPrinter
         System.Console.WriteLine("  --body         Request body (collection)");
         System.Console.WriteLine("  --query        Request query (collection, repeatable)");
         System.Console.WriteLine("  --header       Request header (collection, repeatable)");
-        System.Console.WriteLine("  --inline       Update request without wizard (env request edit)");
+        System.Console.WriteLine("  --inline       Update without wizard (request edit, env edit)");
         System.Console.WriteLine("  -h, --help     Show this help");
         System.Console.WriteLine();
 
