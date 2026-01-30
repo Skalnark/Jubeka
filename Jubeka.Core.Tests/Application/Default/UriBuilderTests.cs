@@ -20,7 +20,7 @@ namespace Jubeka.Core.Tests.Application.Default
         {
             var rawUrl = "http://example.com/";
             Dictionary<string, string> vars = new() { { "value2", "dynamic" } };
-            List<string> queryParameters = new() { "key1=value1", "key2={{value2}}" };
+            List<string> queryParameters = ["key1=value1", "key2={{value2}}"];
             IReadOnlyList<(string Key, string Value)> parsedQueryParams = _parser.Parse(queryParameters, vars);
 
             Uri uri = _builder.Build(rawUrl, vars, parsedQueryParams);
@@ -33,7 +33,7 @@ namespace Jubeka.Core.Tests.Application.Default
         {
             var rawUrl = "http://example.com/api/{{endpoint}}";
             Dictionary<string, string> vars = new() { { "endpoint", "users" } };
-            List<string> queryParameters = new();
+            List<string> queryParameters = [];
             IReadOnlyList<(string Key, string Value)> parsedQueryParams = _parser.Parse(queryParameters, vars);
 
             Uri uri = _builder.Build(rawUrl, vars, parsedQueryParams);
@@ -45,8 +45,8 @@ namespace Jubeka.Core.Tests.Application.Default
         public void InvalidUri_ThrowsException()
         {
             var rawUrl = "http://";
-            Dictionary<string, string> vars = new();
-            List<string> queryParameters = new();
+            Dictionary<string, string> vars = [];
+            List<string> queryParameters = [];
             IReadOnlyList<(string Key, string Value)> parsedQueryParams = _parser.Parse(queryParameters, vars);
 
             Assert.Throws<UriFormatException>(() => _builder.Build(rawUrl, vars, parsedQueryParams));

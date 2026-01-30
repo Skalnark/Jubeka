@@ -24,8 +24,8 @@ namespace Jubeka.Core.Tests.Application.Default
                     Method: "post",
                     Url: "https://example.test/api/{{id}}",
                     Body: "@" + tmp,
-                    QueryParameters: new List<string> { "p=1" },
-                    Headers: new List<string> { "X-Custom: v" }
+                    QueryParameters: ["p=1"],
+                    Headers: ["X-Custom: v"]
                 );
 
                 Dictionary<string, string> vars = new() { { "id", "100" } };

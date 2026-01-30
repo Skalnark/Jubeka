@@ -26,8 +26,8 @@ public sealed class ArgumentParser : IArgumentParser
         string? envPath = null;
         double timeoutSeconds = 100;
         bool pretty = false;
-        List<string> rawQueries = new();
-        List<string> rawHeaders = new();
+        List<string> rawQueries = [];
+        List<string> rawHeaders = [];
 
         for (int i = 0; i < filteredArgs.Count; i++)
         {

@@ -34,7 +34,7 @@ public class HttpRequestExecutorTests
 
                 // Read request headers
                 string? line;
-                List<string> headers = new();
+                List<string> headers = [];
                 while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) is { } && line != string.Empty)
                 {
                     headers.Add(line);
@@ -84,7 +84,7 @@ public class HttpRequestExecutorTests
         });
 
         Uri uri = new UriBuilder("http", "127.0.0.1", port, "/test").Uri;
-        List<(string Key, string Value)> headersList = new() { ("X-Test", "v1") };
+        List<(string Key, string Value)> headersList = [("X-Test", "v1")];
         RequestData requestData = new(HttpMethod.Post, uri, headersList, "hello-body");
 
         ResponseData result = await HttpRequestExecutor.ExecuteAsync(requestData, TimeSpan.FromSeconds(5), CancellationToken.None).ConfigureAwait(false);

@@ -1,4 +1,3 @@
-using Jubeka.Core.Application;
 using Jubeka.Core.Application.Default;
 using Xunit;
 
@@ -13,7 +12,7 @@ namespace Jubeka.Core.Tests.Application.Default
 
         public void Substitute_NullOrEmptyOrNoVars_ReturnsExpected(string raw, string expected, string? placeholder, string? var)
         {
-            Dictionary<string, string> vars = new();
+            Dictionary<string, string> vars = [];
             if (placeholder != null && var != null)
             {
                 vars[placeholder] = var;

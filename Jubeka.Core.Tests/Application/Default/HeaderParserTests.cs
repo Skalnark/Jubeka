@@ -10,8 +10,8 @@ namespace Jubeka.Core.Tests.Application.Default
         [Fact]
         public void ValidHeaders_AreParsedCorrectly()
         {
-            List<string> raw = new() { "Header1: Value1", "Header2: Value2" };
-            Dictionary<string, string> vars = new();
+            List<string> raw = ["Header1: Value1", "Header2: Value2"];
+            Dictionary<string, string> vars = [];
             List<(string Key, string Value)> parsed = _parser.Parse(raw, vars).ToList();
             Assert.Equal(2, parsed.Count);
             Assert.Equal(("Header1", "Value1"), parsed[0]);
@@ -21,8 +21,8 @@ namespace Jubeka.Core.Tests.Application.Default
         [Fact]
         public void InvalidHeaders_AreSkipped()
         {
-            List<string> raw = new() { "Header1 Value1", "Header2-Value2", "Header3:" };
-            Dictionary<string, string> vars = new();
+            List<string> raw = ["Header1 Value1", "Header2-Value2", "Header3:"];
+            Dictionary<string, string> vars = [];
             List<(string Key, string Value)> parsed = _parser.Parse(raw, vars).ToList();
             Assert.Equal([], parsed);
         }

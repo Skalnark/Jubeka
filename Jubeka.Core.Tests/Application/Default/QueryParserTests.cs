@@ -11,8 +11,8 @@ public class QueryParserTests
     [Fact]
     public void ValidKeyValuePairs_AreParsedCorrectly()
     {
-        List<string> raw = new() { "key1=value1", "key2=value2" };
-        Dictionary<string, string> vars = new();
+        List<string> raw = ["key1=value1", "key2=value2"];
+        Dictionary<string, string> vars = [];
         List<(string Key, string Value)> parsed = _parser.Parse(raw, vars).ToList();
         Assert.Equal(2, parsed.Count);
         Assert.Equal(("key1", "value1"), parsed[0]);
@@ -22,8 +22,8 @@ public class QueryParserTests
     [Fact]
     public void InvalidPairs_AreSkipped()
     {
-        List<string> raw = new() { "key1=", "key", "=value" };
-        Dictionary<string, string> vars = new();
+        List<string> raw = ["key1=", "key", "=value"];
+        Dictionary<string, string> vars = [];
         List<(string Key, string Value)> parsed = _parser.Parse(raw, vars).ToList();
         Assert.Equal([], parsed);
     }

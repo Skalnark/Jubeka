@@ -33,7 +33,16 @@ public sealed class JsonResponseFormatter : IResponseFormatter
             return false;
         }
 
-        string trimmed = input.Trim();
-        return (trimmed.StartsWith("{") && trimmed.EndsWith("}")) || (trimmed.StartsWith("[") && trimmed.EndsWith("]"));
+        try
+        {
+            // TODO: More efficient way to check for valid JSON?
+            JsonSerializer.Serialize(JsonDocument.Parse(input).RootElement);
+        }
+        catch
+        {
+            return false;
+        }
+
+        return true;
     }
 }
