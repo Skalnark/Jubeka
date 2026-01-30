@@ -103,7 +103,12 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         string targetPath = Path.Combine(envDirectory, VarsFileName);
         if (!string.IsNullOrWhiteSpace(varsPath) && File.Exists(varsPath))
         {
-            File.Copy(varsPath, targetPath, true);
+            string sourceFullPath = Path.GetFullPath(varsPath);
+            string targetFullPath = Path.GetFullPath(targetPath);
+            if (!string.Equals(sourceFullPath, targetFullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                File.Copy(varsPath, targetPath, true);
+            }
         }
         else if (!File.Exists(targetPath))
         {
