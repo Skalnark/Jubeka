@@ -7,7 +7,7 @@ public sealed class JsonResponseFormatter : IResponseFormatter
 {
     public string Format(string body, bool pretty)
     {
-        if (!pretty || !IsJson(body))
+        if (!IsJson(body))
         {
             return body;
         }
@@ -17,7 +17,8 @@ public sealed class JsonResponseFormatter : IResponseFormatter
             using JsonDocument document = JsonDocument.Parse(body);
             return JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions
             {
-                WriteIndented = true
+                WriteIndented = pretty,
+                IndentSize = 2
             });
         }
         catch

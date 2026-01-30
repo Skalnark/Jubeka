@@ -38,6 +38,38 @@ public class ArgumentParserTests
     }
 
     [Fact]
+    public void Parse_BodyAndPrettyAndTimeout_ParsesValues()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "--method", "POST",
+            "--url", "https://example.com",
+            "--body", "{\"a\":1}",
+            "--pretty",
+            "--timeout", "2.5"
+        ]);
+
+        Assert.False(result.ShowHelp);
+        Assert.NotNull(result.Options);
+        Assert.Equal("POST", result.Options!.Method);
+        Assert.Equal("https://example.com", result.Options.Url);
+        Assert.True(result.Options.Pretty);
+        Assert.Equal(2.5, result.Options.TimeoutSeconds);
+    }
+
+    [Fact]
+    public void Parse_HelpFlag_ReturnsHelp()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse(["-h"]);
+
+        Assert.True(result.ShowHelp);
+        Assert.Null(result.Options);
+    }
+
+    [Fact]
     public void Parse_InvalidTimeout_ReturnsHelpWithError()
     {
         ArgumentParser parser = new();
