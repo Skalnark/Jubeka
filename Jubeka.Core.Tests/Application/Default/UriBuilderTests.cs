@@ -19,9 +19,9 @@ namespace Jubeka.Core.Tests.Application.Default
         public void ValidUri_IsBuiltCorrectly()
         {
             var rawUrl = "http://example.com/";
-            var vars = new Dictionary<string, string> () { { "value2", "dynamic" } };
-            var queryParameters = new List<string> { "key1=value1", "key2={{value2}}" };
-            var parsedQueryParams = _parser.Parse(queryParameters, vars);
+            Dictionary<string, string> vars = new() { { "value2", "dynamic" } };
+            List<string> queryParameters = new() { "key1=value1", "key2={{value2}}" };
+            IReadOnlyList<(string Key, string Value)> parsedQueryParams = _parser.Parse(queryParameters, vars);
 
             Uri uri = _builder.Build(rawUrl, vars, parsedQueryParams);
 
@@ -32,9 +32,9 @@ namespace Jubeka.Core.Tests.Application.Default
         public void ValidUriWithoutQueryParameters_IsBuiltCorrectly()
         {
             var rawUrl = "http://example.com/api/{{endpoint}}";
-            var vars = new Dictionary<string, string>() { { "endpoint", "users" } };
-            var queryParameters = new List<string> ();
-            var parsedQueryParams = _parser.Parse(queryParameters, vars);
+            Dictionary<string, string> vars = new() { { "endpoint", "users" } };
+            List<string> queryParameters = new();
+            IReadOnlyList<(string Key, string Value)> parsedQueryParams = _parser.Parse(queryParameters, vars);
 
             Uri uri = _builder.Build(rawUrl, vars, parsedQueryParams);
 
@@ -45,9 +45,9 @@ namespace Jubeka.Core.Tests.Application.Default
         public void InvalidUri_ThrowsException()
         {
             var rawUrl = "http://";
-            var vars = new Dictionary<string, string>();
-            var queryParameters = new List<string> ();
-            var parsedQueryParams = _parser.Parse(queryParameters, vars);
+            Dictionary<string, string> vars = new();
+            List<string> queryParameters = new();
+            IReadOnlyList<(string Key, string Value)> parsedQueryParams = _parser.Parse(queryParameters, vars);
 
             Assert.Throws<UriFormatException>(() => _builder.Build(rawUrl, vars, parsedQueryParams));
         }

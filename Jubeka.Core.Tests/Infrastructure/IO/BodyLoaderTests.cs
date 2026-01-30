@@ -1,8 +1,7 @@
-using System.IO;
-using Jubeka.Core.Infraestructure.IO;
+using Jubeka.Core.Infrastructure.IO;
 using Xunit;
 
-namespace Jubeka.Core.Tests.Infraestructure.IO
+namespace Jubeka.Core.Tests.Infrastructure.IO
 {
     public class BodyLoaderTests
     {
@@ -11,7 +10,7 @@ namespace Jubeka.Core.Tests.Infraestructure.IO
         [InlineData("plain", "plain")]
         public void Load_NullOrLiteral_ReturnsExpected(string? arg, string expected)
         {
-            var loader = new BodyLoader();
+            BodyLoader loader = new();
             Assert.Equal(expected, loader.Load(arg));
         }
 
@@ -22,7 +21,7 @@ namespace Jubeka.Core.Tests.Infraestructure.IO
             try
             {
                 File.WriteAllText(tmp, "hello-body");
-                var loader = new BodyLoader();
+                BodyLoader loader = new();
                 string outp = loader.Load("@" + tmp);
                 Assert.Equal("hello-body", outp);
             }
@@ -32,7 +31,7 @@ namespace Jubeka.Core.Tests.Infraestructure.IO
         [Fact]
         public void Load_MissingFile_Throws()
         {
-            var loader = new BodyLoader();
+            BodyLoader loader = new();
             Assert.Throws<FileNotFoundException>(() => loader.Load("@non-existent-file-xyz"));
         }
 

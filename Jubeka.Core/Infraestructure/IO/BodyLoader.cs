@@ -1,6 +1,6 @@
 using Jubeka.Core.Application;
 
-namespace Jubeka.Core.Infraestructure.IO;
+namespace Jubeka.Core.Infrastructure.IO;
 
 public sealed class BodyLoader : IBodyLoader
 {

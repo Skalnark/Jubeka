@@ -1,7 +1,7 @@
 using System.Text;
 using Jubeka.Core.Domain;
 
-namespace Jubeka.Core.Infraestructure.Http;
+namespace Jubeka.Core.Infrastructure.Http;
 
 public static class HttpRequestExecutor
 {

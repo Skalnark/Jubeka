@@ -1,6 +1,6 @@
 using Jubeka.Core.Application.Default;
 using Jubeka.Core.Domain;
-using Jubeka.Core.Infraestructure.IO;
+using Jubeka.Core.Infrastructure.IO;
 using Xunit;
 
 namespace Jubeka.Core.Tests.Application.Default
@@ -19,8 +19,8 @@ namespace Jubeka.Core.Tests.Application.Default
                 QueryParser queryParser = new();
                 UriBuilderHelper uriBuilder = new(queryParser);
 
-                var builder = new RequestDataBuilder(bodyLoader, headerParser, queryParser, uriBuilder);
-                var options = new RequestOptions(
+                RequestDataBuilder builder = new(bodyLoader, headerParser, queryParser, uriBuilder);
+                RequestOptions options = new(
                     Method: "post",
                     Url: "https://example.test/api/{{id}}",
                     Body: "@" + tmp,
@@ -28,7 +28,7 @@ namespace Jubeka.Core.Tests.Application.Default
                     Headers: new List<string> { "X-Custom: v" }
                 );
 
-                var vars = new Dictionary<string, string> { { "id", "100" } };
+                Dictionary<string, string> vars = new() { { "id", "100" } };
                 RequestData data = builder.Build(options, vars);
 
                 Assert.Equal("POST", data.Method.Method);

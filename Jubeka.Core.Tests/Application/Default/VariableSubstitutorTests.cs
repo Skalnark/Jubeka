@@ -13,7 +13,7 @@ namespace Jubeka.Core.Tests.Application.Default
 
         public void Substitute_NullOrEmptyOrNoVars_ReturnsExpected(string raw, string expected, string? placeholder, string? var)
         {
-            var vars = new Dictionary<string, string>();
+            Dictionary<string, string> vars = new();
             if (placeholder != null && var != null)
             {
                 vars[placeholder] = var;
@@ -27,7 +27,7 @@ namespace Jubeka.Core.Tests.Application.Default
         [Fact]
         public void Substitute_ReplacesPlaceholders_CaseInsensitive()
         {
-            var vars = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { { "Name", "World" } };
+            Dictionary<string, string> vars = new(StringComparer.OrdinalIgnoreCase) { { "Name", "World" } };
             string result = VariableSubstitutor.Substitute("Hello {{name}}", vars);
             Assert.Equal("Hello World", result);
         }

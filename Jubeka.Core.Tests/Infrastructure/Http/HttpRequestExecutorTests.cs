@@ -2,10 +2,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Jubeka.Core.Domain;
-using Jubeka.Core.Infraestructure.Http;
+using Jubeka.Core.Infrastructure.Http;
 using Xunit;
 
-namespace Jubeka.Core.Tests.Infraestructure.Http;
+namespace Jubeka.Core.Tests.Infrastructure.Http;
 
 // NOTE: This test was written by AI, don't trust it
 // TODO: Rewrite this test
@@ -20,21 +20,21 @@ public class HttpRequestExecutorTests
         // Reserve a free port
         var port = GetFreePort();
 
-        var listener = new TcpListener(IPAddress.Loopback, port);
+        TcpListener listener = new(IPAddress.Loopback, port);
         listener.Start();
 
-        var serverTask = Task.Run(async () =>
+        Task serverTask = Task.Run(async () =>
         {
             try
             {
-                using var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
-                using var stream = client.GetStream();
-                using var reader = new StreamReader(stream, Encoding.ASCII, false, 1024, true);
-                using var writer = new StreamWriter(stream, Encoding.ASCII, 1024, true) { NewLine = "\r\n", AutoFlush = true };
+                using TcpClient client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
+                using NetworkStream stream = client.GetStream();
+                using StreamReader reader = new(stream, Encoding.ASCII, false, 1024, true);
+                using StreamWriter writer = new(stream, Encoding.ASCII, 1024, true) { NewLine = "\r\n", AutoFlush = true };
 
                 // Read request headers
                 string? line;
-                var headers = new List<string>();
+                List<string> headers = new();
                 while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) is { } && line != string.Empty)
                 {
                     headers.Add(line);
@@ -83,11 +83,11 @@ public class HttpRequestExecutorTests
             }
         });
 
-        var uri = new UriBuilder("http", "127.0.0.1", port, "/test").Uri;
-        var headersList = new List<(string Key, string Value)> { ("X-Test", "v1") };
-        var requestData = new RequestData(HttpMethod.Post, uri, headersList, "hello-body");
+        Uri uri = new UriBuilder("http", "127.0.0.1", port, "/test").Uri;
+        List<(string Key, string Value)> headersList = new() { ("X-Test", "v1") };
+        RequestData requestData = new(HttpMethod.Post, uri, headersList, "hello-body");
 
-        var result = await HttpRequestExecutor.ExecuteAsync(requestData, TimeSpan.FromSeconds(5), CancellationToken.None).ConfigureAwait(false);
+        ResponseData result = await HttpRequestExecutor.ExecuteAsync(requestData, TimeSpan.FromSeconds(5), CancellationToken.None).ConfigureAwait(false);
 
         // Wait for server task to complete processing
         await serverTask.ConfigureAwait(false);
@@ -106,7 +106,7 @@ public class HttpRequestExecutorTests
 
     private static int GetFreePort()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
