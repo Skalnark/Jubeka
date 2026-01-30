@@ -217,6 +217,36 @@ public class ArgumentParserTests
         EnvRequestEditOptions options = Assert.IsType<EnvRequestEditOptions>(result.Options);
         Assert.Equal("dev", options.EnvName);
         Assert.Equal("Ping", options.RequestName);
+        Assert.False(options.Inline);
+    }
+
+    [Fact]
+    public void Parse_EnvRequestEdit_WithInline_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "request",
+            "edit",
+            "--req-name", "Ping",
+            "--inline",
+            "--method", "POST",
+            "--url", "https://example.com/ping",
+            "--body", "{}",
+            "--query", "q=1",
+            "--header", "X-Test: v"
+        ]);
+
+        Assert.Equal(CliCommand.EnvRequestEdit, result.Command);
+        EnvRequestEditOptions options = Assert.IsType<EnvRequestEditOptions>(result.Options);
+        Assert.Equal("Ping", options.RequestName);
+        Assert.True(options.Inline);
+        Assert.Equal("POST", options.Method);
+        Assert.Equal("https://example.com/ping", options.Url);
+        Assert.Equal("{}", options.Body);
+        Assert.Single(options.QueryParams);
+        Assert.Single(options.Headers);
     }
 
     [Fact]

@@ -6,10 +6,8 @@
 
 ./out/jubeka-cli env request list
 
-./out/jubeka-cli env request edit --req-name dogs --method POST
+./out/jubeka-cli env request edit --inline --req-name dogs --method POST
 
 ./out/jubeka-cli env request list
 
-./out/jubeka-cli env request edit --req-name dogs --method GET
-
-./out/jubeka-cli -h
+./out/jubeka-cli env request edit --inline --req-name dogs --method GET

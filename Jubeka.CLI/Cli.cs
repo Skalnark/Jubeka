@@ -299,6 +299,30 @@ public sealed class Cli(
             return 0;
         }
 
+        if (options.Inline)
+        {
+            if (string.IsNullOrWhiteSpace(options.RequestName))
+            {
+                Console.Error.WriteLine("--req-name is required when using --inline.");
+                return 1;
+            }
+
+            int inlineIndex = FindRequestIndexByName(config.Requests, options.RequestName);
+            if (inlineIndex < 0)
+            {
+                Console.Error.WriteLine($"Request not found: {options.RequestName}");
+                return 1;
+            }
+
+            RequestDefinition updatedRequest = ApplyInlineEdits(config.Requests[inlineIndex], options);
+            List<RequestDefinition> inlineRequests = config.Requests.ToList();
+            inlineRequests[inlineIndex] = updatedRequest;
+            EnvironmentConfig inlineConfig = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, inlineRequests);
+            environmentConfigStore.Save(inlineConfig, Directory.GetCurrentDirectory());
+            Console.WriteLine($"Request '{updatedRequest.Name}' updated in '{config.Name}'.");
+            return 0;
+        }
+
         IReadOnlyDictionary<string, string> vars = LoadEnvVarsSafe(config.VarsPath);
         int index = SelectRequestIndex(config.Requests, options.RequestName);
         if (index < 0)
@@ -315,6 +339,33 @@ public sealed class Cli(
         environmentConfigStore.Save(updated, Directory.GetCurrentDirectory());
         Console.WriteLine($"Request '{edited.Name}' updated in '{config.Name}'.");
         return 0;
+    }
+
+    private static int FindRequestIndexByName(IReadOnlyList<RequestDefinition> requests, string name)
+    {
+        for (int i = 0; i < requests.Count; i++)
+        {
+            if (string.Equals(requests[i].Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static RequestDefinition ApplyInlineEdits(RequestDefinition request, EnvRequestEditOptions options)
+    {
+        string method = string.IsNullOrWhiteSpace(options.Method) ? request.Method : options.Method;
+        string url = string.IsNullOrWhiteSpace(options.Url) ? request.Url : options.Url;
+        string? body = options.Body ?? request.Body;
+        IReadOnlyList<QueryParamDefinition> queries = options.QueryParams?.Count > 0
+            ? NormalizeQueryParams(options.QueryParams)
+            : request.QueryParams;
+        IReadOnlyList<string> headers = options.Headers?.Count > 0
+            ? options.Headers.ToList()
+            : request.Headers;
+        return new RequestDefinition(request.Name, method, url, body, queries, headers, request.Auth);
     }
 
     private static EnvironmentConfig BuildEnvironmentConfigInteractively(EnvConfigOptions options, string action)

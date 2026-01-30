@@ -253,6 +253,7 @@ public sealed class ArgumentParser : IArgumentParser
         string? requestMethod = null;
         string? requestUrl = null;
         string? requestBody = null;
+        bool requestInline = false;
         List<string> requestQueries = [];
         List<string> requestHeaders = [];
 
@@ -306,6 +307,9 @@ public sealed class ArgumentParser : IArgumentParser
                         return ParseResult.Help($"Missing value for {arg}.");
                     }
                     requestName = reqNameValue;
+                    break;
+                case "--inline":
+                    requestInline = true;
                     break;
                 case "--method":
                     if (!TryGetValue(args, ref i, out string? reqMethodValue))
@@ -366,7 +370,15 @@ public sealed class ArgumentParser : IArgumentParser
 
         if (command == CliCommand.EnvRequestEdit)
         {
-            EnvRequestEditOptions editOptions = new(name, requestName);
+            EnvRequestEditOptions editOptions = new(
+                name,
+                requestName,
+                requestInline,
+                requestMethod,
+                requestUrl,
+                requestBody,
+                requestQueries,
+                requestHeaders);
             return ParseResult.Success(CliCommand.EnvRequestEdit, editOptions);
         }
 
