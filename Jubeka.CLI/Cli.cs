@@ -40,6 +40,9 @@ public sealed class Cli(
                 CliCommand.EnvCreate => RunEnvCreate((EnvConfigOptions)parseResult.Options),
                 CliCommand.EnvUpdate => RunEnvUpdate((EnvConfigOptions)parseResult.Options),
                 CliCommand.EnvRequestAdd => RunEnvRequestAdd((EnvRequestAddOptions)parseResult.Options),
+                CliCommand.EnvRequestList => RunEnvRequestList((EnvRequestListOptions)parseResult.Options),
+                CliCommand.EnvRequestEdit => RunEnvRequestEdit((EnvRequestEditOptions)parseResult.Options),
+                CliCommand.EnvSet => RunEnvSet((EnvSetOptions)parseResult.Options),
                 _ => helpPrinter.Print("Unknown command.")
             };
         }
@@ -108,12 +111,18 @@ public sealed class Cli(
         OpenApiSource? source = options.Source;
         string? envPath = options.EnvPath;
 
-        if (!string.IsNullOrWhiteSpace(options.EnvName))
+        string? envName = options.EnvName;
+        if (string.IsNullOrWhiteSpace(envName))
         {
-            EnvironmentConfig? config = environmentConfigStore.Get(options.EnvName, Directory.GetCurrentDirectory());
+            (envName, _) = ResolveCurrentEnv(null, false);
+        }
+
+        if (!string.IsNullOrWhiteSpace(envName))
+        {
+            EnvironmentConfig? config = environmentConfigStore.Get(envName, Directory.GetCurrentDirectory());
             if (config == null)
             {
-                throw new OpenApiSpecificationException($"Environment config not found: {options.EnvName}");
+                throw new OpenApiSpecificationException($"Environment config not found: {envName}");
             }
 
             source ??= config.DefaultOpenApiSource;
@@ -131,6 +140,30 @@ public sealed class Cli(
         }
 
         return (source, envPath);
+    }
+
+    private int RunEnvSet(EnvSetOptions options)
+    {
+        EnvironmentConfig? config = environmentConfigStore.Get(options.Name, Directory.GetCurrentDirectory());
+        if (config == null)
+        {
+            Console.Error.WriteLine($"Environment config not found: {options.Name}");
+            return 1;
+        }
+
+        environmentConfigStore.SetCurrent(options.Name, options.Local, Directory.GetCurrentDirectory());
+        Console.WriteLine($"Current environment set to '{options.Name}'.");
+        return 0;
+    }
+
+    private (string? Name, bool Local) ResolveCurrentEnv(string? explicitName, bool localFlag)
+    {
+        if (!string.IsNullOrWhiteSpace(explicitName))
+        {
+            return (explicitName, localFlag);
+        }
+
+        return environmentConfigStore.GetCurrentInfo(Directory.GetCurrentDirectory());
     }
 
     private int RunEnvCreate(EnvConfigOptions options)
@@ -153,20 +186,99 @@ public sealed class Cli(
 
     private int RunEnvRequestAdd(EnvRequestAddOptions options)
     {
-        EnvironmentConfig? config = environmentConfigStore.Get(options.EnvName, Directory.GetCurrentDirectory());
-        if (config == null)
+        (string? envName, bool scopeLocal) = ResolveCurrentEnv(options.EnvName, options.Local);
+        if (string.IsNullOrWhiteSpace(envName))
         {
-            Console.Error.WriteLine($"Environment config not found: {options.EnvName}");
+            Console.Error.WriteLine("No environment selected. Use --name or set a current environment.");
             return 1;
         }
 
-        RequestDefinition request = BuildRequestDefinitionInteractively(options);
+        EnvironmentConfig? config = environmentConfigStore.Get(envName, Directory.GetCurrentDirectory());
+        if (config == null)
+        {
+            Console.Error.WriteLine($"Environment config not found: {envName}");
+            return 1;
+        }
+
+        IReadOnlyDictionary<string, string> vars = LoadEnvVarsSafe(config.VarsPath);
+        RequestDefinition request = BuildRequestDefinitionInteractively(options, vars);
         List<RequestDefinition> requests = config.Requests?.ToList() ?? [];
         requests.Add(request);
 
         EnvironmentConfig updated = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, requests);
-        environmentConfigStore.Save(updated, options.Local, Directory.GetCurrentDirectory());
+        environmentConfigStore.Save(updated, scopeLocal, Directory.GetCurrentDirectory());
         Console.WriteLine($"Request '{request.Name}' added to '{config.Name}'.");
+        return 0;
+    }
+
+    private int RunEnvRequestList(EnvRequestListOptions options)
+    {
+        (string? envName, _) = ResolveCurrentEnv(options.EnvName, options.Local);
+        if (string.IsNullOrWhiteSpace(envName))
+        {
+            Console.Error.WriteLine("No environment selected. Use --name or set a current environment.");
+            return 1;
+        }
+
+        EnvironmentConfig? config = environmentConfigStore.Get(envName, Directory.GetCurrentDirectory());
+        if (config == null)
+        {
+            Console.Error.WriteLine($"Environment config not found: {envName}");
+            return 1;
+        }
+
+        if (config.Requests.Count == 0)
+        {
+            Console.WriteLine("No requests in this environment.");
+            return 0;
+        }
+
+        for (int i = 0; i < config.Requests.Count; i++)
+        {
+            RequestDefinition request = config.Requests[i];
+            Console.WriteLine($"{i + 1}. {request.Name} [{request.Method}] {request.Url}");
+        }
+
+        return 0;
+    }
+
+    private int RunEnvRequestEdit(EnvRequestEditOptions options)
+    {
+        (string? envName, bool scopeLocal) = ResolveCurrentEnv(options.EnvName, options.Local);
+        if (string.IsNullOrWhiteSpace(envName))
+        {
+            Console.Error.WriteLine("No environment selected. Use --name or set a current environment.");
+            return 1;
+        }
+
+        EnvironmentConfig? config = environmentConfigStore.Get(envName, Directory.GetCurrentDirectory());
+        if (config == null)
+        {
+            Console.Error.WriteLine($"Environment config not found: {envName}");
+            return 1;
+        }
+
+        if (config.Requests.Count == 0)
+        {
+            Console.WriteLine("No requests in this environment.");
+            return 0;
+        }
+
+        IReadOnlyDictionary<string, string> vars = LoadEnvVarsSafe(config.VarsPath);
+        int index = SelectRequestIndex(config.Requests, options.RequestName);
+        if (index < 0)
+        {
+            Console.WriteLine("No request selected.");
+            return 0;
+        }
+
+        RequestDefinition edited = EditRequestInteractively(config.Requests[index], vars);
+        List<RequestDefinition> updatedRequests = config.Requests.ToList();
+        updatedRequests[index] = edited;
+
+        EnvironmentConfig updated = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, updatedRequests);
+        environmentConfigStore.Save(updated, scopeLocal, Directory.GetCurrentDirectory());
+        Console.WriteLine($"Request '{edited.Name}' updated in '{config.Name}'.");
         return 0;
     }
 
@@ -199,7 +311,7 @@ public sealed class Cli(
         return (new EnvironmentConfig(name, varsPath, source, []), local);
     }
 
-    private static RequestDefinition BuildRequestDefinitionInteractively(EnvRequestAddOptions options)
+    private static RequestDefinition BuildRequestDefinitionInteractively(EnvRequestAddOptions options, IReadOnlyDictionary<string, string> vars)
     {
         Console.WriteLine("Starting request add wizard:");
 
@@ -208,21 +320,384 @@ public sealed class Cli(
         string url = PromptRequired("URL", options.Url);
         string? body = PromptOptional("Body (optional)", options.Body);
 
-        List<string> queries = options.QueryParams?.ToList() ?? [];
-        while (PromptYesNo("Add query param?", null) == true)
-        {
-            string q = PromptRequired("Query (key=value)", null);
-            queries.Add(q);
-        }
+        List<QueryParamDefinition> queries = NormalizeQueryParams(options.QueryParams);
+        ManageQueryParams(queries, vars);
 
         List<string> headers = options.Headers?.ToList() ?? [];
-        while (PromptYesNo("Add header?", null) == true)
+        ManageHeaders(headers);
+
+        AuthConfig auth = BuildAuthConfigInteractively(vars);
+
+        return new RequestDefinition(name, method, url, body, queries, headers, auth);
+    }
+
+    private static RequestDefinition EditRequestInteractively(RequestDefinition request, IReadOnlyDictionary<string, string> vars)
+    {
+        string name = request.Name;
+        string method = request.Method;
+        string url = request.Url;
+        string? body = request.Body;
+        List<QueryParamDefinition> queries = request.QueryParams.ToList();
+        List<string> headers = request.Headers.ToList();
+        AuthConfig auth = request.Auth;
+
+        while (true)
         {
-            string h = PromptRequired("Header (Name: Value)", null);
-            headers.Add(h);
+            Console.WriteLine();
+            Console.WriteLine("Edit request:");
+            Console.WriteLine("1) Name");
+            Console.WriteLine("2) Method");
+            Console.WriteLine("3) URL");
+            Console.WriteLine("4) Body");
+            Console.WriteLine("5) Query params");
+            Console.WriteLine("6) Headers");
+            Console.WriteLine("7) Auth");
+            Console.WriteLine("8) Save");
+            Console.WriteLine("9) Cancel");
+
+            string choice = PromptWithDefault("Select", "8");
+            switch (choice)
+            {
+                case "1":
+                    name = PromptRequired("Name", name);
+                    break;
+                case "2":
+                    method = PromptRequired("Method", method);
+                    break;
+                case "3":
+                    url = PromptRequired("URL", url);
+                    break;
+                case "4":
+                    body = PromptOptional("Body (optional)", body);
+                    break;
+                case "5":
+                    ManageQueryParams(queries, vars);
+                    break;
+                case "6":
+                    ManageHeaders(headers);
+                    break;
+                case "7":
+                    auth = BuildAuthConfigInteractively(vars, auth);
+                    break;
+                case "8":
+                    return new RequestDefinition(name, method, url, body, queries, headers, auth);
+                case "9":
+                    return request;
+                default:
+                    Console.WriteLine("Invalid option.");
+                    break;
+            }
+        }
+    }
+
+    private int SelectRequestIndex(IReadOnlyList<RequestDefinition> requests, string? requestName)
+    {
+        if (!string.IsNullOrWhiteSpace(requestName))
+        {
+            int idx = requests.ToList().FindIndex(r => string.Equals(r.Name, requestName, StringComparison.OrdinalIgnoreCase));
+            return idx;
         }
 
-        return new RequestDefinition(name, method, url, body, queries, headers);
+        Console.WriteLine("Select a request:");
+        for (int i = 0; i < requests.Count; i++)
+        {
+            Console.WriteLine($"{i + 1}. {requests[i].Name} [{requests[i].Method}] {requests[i].Url}");
+        }
+
+        string input = PromptWithDefault("Enter number (blank to cancel)", string.Empty);
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return -1;
+        }
+
+        if (int.TryParse(input, out int choice) && choice >= 1 && choice <= requests.Count)
+        {
+            return choice - 1;
+        }
+
+        Console.WriteLine("Invalid selection.");
+        return -1;
+    }
+
+    private static void ManageQueryParams(List<QueryParamDefinition> queries, IReadOnlyDictionary<string, string> vars)
+    {
+        while (true)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Query params:");
+            if (queries.Count == 0)
+            {
+                Console.WriteLine("(none)");
+            }
+            else
+            {
+                for (int i = 0; i < queries.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. {queries[i].Key}={queries[i].Value}");
+                }
+            }
+
+            Console.WriteLine("1) Add new");
+            Console.WriteLine("2) Change");
+            Console.WriteLine("3) Delete");
+            Console.WriteLine("4) Select existing variable");
+            Console.WriteLine("5) Done");
+
+            string choice = PromptWithDefault("Select", "5");
+            switch (choice)
+            {
+                case "1":
+                    AddQueryParam(queries, vars, allowVarSelection: true);
+                    break;
+                case "2":
+                    ChangeQueryParam(queries, vars);
+                    break;
+                case "3":
+                    DeleteQueryParam(queries);
+                    break;
+                case "4":
+                    AddQueryParam(queries, vars, allowVarSelection: true, forceSelectVar: true);
+                    break;
+                case "5":
+                    return;
+                default:
+                    Console.WriteLine("Invalid option.");
+                    break;
+            }
+        }
+    }
+
+    private static void AddQueryParam(List<QueryParamDefinition> queries, IReadOnlyDictionary<string, string> vars, bool allowVarSelection, bool forceSelectVar = false)
+    {
+        string key = PromptRequired("Query key", null);
+        string value;
+
+        if (allowVarSelection && vars.Count > 0 && (forceSelectVar || PromptYesNo("Use existing variable?", false) == true))
+        {
+            string selected = PromptSelectVariable(vars);
+            value = $"{{{{{selected}}}}}";
+        }
+        else
+        {
+            value = PromptRequired("Query value", null);
+        }
+
+        queries.Add(new QueryParamDefinition(key, value));
+    }
+
+    private static void ChangeQueryParam(List<QueryParamDefinition> queries, IReadOnlyDictionary<string, string> vars)
+    {
+        if (queries.Count == 0)
+        {
+            Console.WriteLine("No query params to change.");
+            return;
+        }
+
+        int index = PromptIndex("Select query param", queries.Count);
+        if (index < 0)
+        {
+            return;
+        }
+
+        QueryParamDefinition current = queries[index];
+        string key = PromptRequired("Query key", current.Key);
+        string value;
+        if (vars.Count > 0 && PromptYesNo("Use existing variable?", false) == true)
+        {
+            string selected = PromptSelectVariable(vars);
+            value = $"{{{{{selected}}}}}";
+        }
+        else
+        {
+            value = PromptRequired("Query value", current.Value);
+        }
+
+        queries[index] = new QueryParamDefinition(key, value);
+    }
+
+    private static void DeleteQueryParam(List<QueryParamDefinition> queries)
+    {
+        if (queries.Count == 0)
+        {
+            Console.WriteLine("No query params to delete.");
+            return;
+        }
+
+        int index = PromptIndex("Select query param to delete", queries.Count);
+        if (index < 0)
+        {
+            return;
+        }
+
+        queries.RemoveAt(index);
+    }
+
+    private static void ManageHeaders(List<string> headers)
+    {
+        while (true)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Headers:");
+            if (headers.Count == 0)
+            {
+                Console.WriteLine("(none)");
+            }
+            else
+            {
+                for (int i = 0; i < headers.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. {headers[i]}");
+                }
+            }
+
+            Console.WriteLine("1) Add new");
+            Console.WriteLine("2) Change");
+            Console.WriteLine("3) Delete");
+            Console.WriteLine("4) Done");
+
+            string choice = PromptWithDefault("Select", "4");
+            switch (choice)
+            {
+                case "1":
+                    headers.Add(PromptRequired("Header (Name: Value)", null));
+                    break;
+                case "2":
+                    if (headers.Count == 0)
+                    {
+                        Console.WriteLine("No headers to change.");
+                        break;
+                    }
+                    int index = PromptIndex("Select header", headers.Count);
+                    if (index >= 0)
+                    {
+                        headers[index] = PromptRequired("Header (Name: Value)", headers[index]);
+                    }
+                    break;
+                case "3":
+                    if (headers.Count == 0)
+                    {
+                        Console.WriteLine("No headers to delete.");
+                        break;
+                    }
+                    int deleteIndex = PromptIndex("Select header to delete", headers.Count);
+                    if (deleteIndex >= 0)
+                    {
+                        headers.RemoveAt(deleteIndex);
+                    }
+                    break;
+                case "4":
+                    return;
+                default:
+                    Console.WriteLine("Invalid option.");
+                    break;
+            }
+        }
+    }
+
+    private static AuthConfig BuildAuthConfigInteractively(IReadOnlyDictionary<string, string> vars, AuthConfig? current = null)
+    {
+        AuthMethod method = current?.Method ?? AuthMethod.Inherit;
+        Console.WriteLine();
+        Console.WriteLine("Auth method:");
+        Console.WriteLine("1) Inherit");
+        Console.WriteLine("2) None");
+        Console.WriteLine("3) Basic");
+        Console.WriteLine("4) Bearer");
+
+        string choice = PromptWithDefault("Select", ((int)method + 1).ToString());
+        method = choice switch
+        {
+            "1" => AuthMethod.Inherit,
+            "2" => AuthMethod.None,
+            "3" => AuthMethod.Basic,
+            "4" => AuthMethod.Bearer,
+            _ => method
+        };
+
+        return method switch
+        {
+            AuthMethod.Basic => new AuthConfig(method,
+                Username: PromptValueOrVariable("Username", vars, current?.Username),
+                Password: PromptValueOrVariable("Password", vars, current?.Password)),
+            AuthMethod.Bearer => new AuthConfig(method,
+                Token: PromptValueOrVariable("Token", vars, current?.Token)),
+            _ => new AuthConfig(method)
+        };
+    }
+
+    private static string PromptValueOrVariable(string label, IReadOnlyDictionary<string, string> vars, string? defaultValue)
+    {
+        if (vars.Count > 0 && PromptYesNo($"Use existing variable for {label}?", false) == true)
+        {
+            string selected = PromptSelectVariable(vars);
+            return $"{{{{{selected}}}}}";
+        }
+
+        return PromptRequired(label, defaultValue);
+    }
+
+    private static string PromptSelectVariable(IReadOnlyDictionary<string, string> vars)
+    {
+        List<string> keys = vars.Keys.OrderBy(k => k).ToList();
+        for (int i = 0; i < keys.Count; i++)
+        {
+            Console.WriteLine($"{i + 1}. {keys[i]}");
+        }
+
+        int index = PromptIndex("Select variable", keys.Count);
+        if (index < 0)
+        {
+            throw new OpenApiSpecificationException("No variable selected.");
+        }
+
+        return keys[index];
+    }
+
+    private static int PromptIndex(string label, int max)
+    {
+        string input = PromptWithDefault($"{label} (1-{max}, blank to cancel)", string.Empty);
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return -1;
+        }
+
+        return int.TryParse(input, out int index) && index >= 1 && index <= max ? index - 1 : -1;
+    }
+
+    private static List<QueryParamDefinition> NormalizeQueryParams(IReadOnlyList<string>? raw)
+    {
+        List<QueryParamDefinition> results = [];
+        if (raw == null)
+        {
+            return results;
+        }
+
+        foreach (string entry in raw)
+        {
+            int idx = entry.IndexOf('=');
+            if (idx <= 0)
+            {
+                continue;
+            }
+
+            string key = entry.Substring(0, idx);
+            string value = entry.Substring(idx + 1);
+            results.Add(new QueryParamDefinition(key, value));
+        }
+
+        return results;
+    }
+
+    private IReadOnlyDictionary<string, string> LoadEnvVarsSafe(string? path)
+    {
+        try
+        {
+            return environmentVariablesLoader.Load(path);
+        }
+        catch
+        {
+            return new Dictionary<string, string>();
+        }
     }
 
     private static string PromptWithDefault(string label, string? defaultValue)

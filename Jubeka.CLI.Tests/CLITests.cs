@@ -88,5 +88,14 @@ public class CLITests
         {
             throw new InvalidOperationException("Environment config store should not be called for help flow.");
         }
+
+        public string? GetCurrent(string? baseDirectory = null) => null;
+
+        public (string? Name, bool Local) GetCurrentInfo(string? baseDirectory = null) => (null, false);
+
+        public void SetCurrent(string name, bool local = false, string? baseDirectory = null)
+        {
+            throw new InvalidOperationException("Environment config store should not be called for help flow.");
+        }
     }
 }

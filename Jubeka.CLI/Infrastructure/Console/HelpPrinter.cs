@@ -19,7 +19,10 @@ public sealed class HelpPrinter : IHelpPrinter
         System.Console.WriteLine("  jubeka openapi request --operation <OPERATION_ID> [options]");
         System.Console.WriteLine("  jubeka env create --name <NAME> --vars <PATH> [options]");
         System.Console.WriteLine("  jubeka env update --name <NAME> --vars <PATH> [options]");
+        System.Console.WriteLine("  jubeka env set --name <NAME> [options]");
         System.Console.WriteLine("  jubeka env request add --name <ENV_NAME> [options]");
+        System.Console.WriteLine("  jubeka env request list --name <ENV_NAME> [options]");
+        System.Console.WriteLine("  jubeka env request edit --name <ENV_NAME> [options]");
         System.Console.WriteLine();
         System.Console.WriteLine("Options:");
         System.Console.WriteLine("  -m, --method   HTTP method (GET, POST, PUT, PATCH, DELETE, etc.)");

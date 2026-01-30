@@ -6,5 +6,8 @@ public enum CliCommand
     OpenApiRequest,
     EnvCreate,
     EnvUpdate,
-    EnvRequestAdd
+    EnvRequestAdd,
+    EnvRequestList,
+    EnvRequestEdit,
+    EnvSet
 }

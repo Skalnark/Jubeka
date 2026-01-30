@@ -46,18 +46,25 @@ dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
 
 ### Environment config management
 
-Create or update a named environment configuration (stored in `$HOME/.config/jubeka/NAME.json`):
+Create or update a named environment configuration (stored in `$HOME/.config/jubeka/NAME/config.json`):
 
 ```bash
 dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
  env create --name dev --vars env.yml --spec-url https://example.com/openapi.yaml
 ```
 
-Create a local environment config (stored in `./.jubeka/NAME.json`):
+Create a local environment config (stored in `./.jubeka/NAME/config.json`):
 
 ```bash
 dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
  env create --name dev --vars env.yml --local
+```
+
+Set the current environment (so you can omit `--name` in env commands):
+
+```bash
+dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
+ env set --name dev
 ```
 
 If the wizard leaves the vars path empty, it defaults to `NAME.yml`. Default OpenAPI spec is optional.
@@ -76,6 +83,27 @@ Add a request to an environment's collection interactively:
 ```bash
 dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
  env request add --name dev
+```
+
+If you set a current environment, you can omit `--name`:
+
+```bash
+dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
+ env request add
+```
+
+List requests in a collection:
+
+```bash
+dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
+ env request list --name dev
+```
+
+Edit a request from the list:
+
+```bash
+dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
+ env request edit --name dev
 ```
 
 ## YAML variables format

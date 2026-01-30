@@ -200,4 +200,76 @@ public class ArgumentParserTests
         Assert.Single(options.QueryParams);
         Assert.Single(options.Headers);
     }
+
+    [Fact]
+    public void Parse_EnvRequestList_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "request",
+            "list",
+            "--name", "dev",
+            "--local"
+        ]);
+
+        Assert.Equal(CliCommand.EnvRequestList, result.Command);
+        EnvRequestListOptions options = Assert.IsType<EnvRequestListOptions>(result.Options);
+        Assert.Equal("dev", options.EnvName);
+        Assert.True(options.Local);
+    }
+
+    [Fact]
+    public void Parse_EnvRequestEdit_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "request",
+            "edit",
+            "--name", "dev",
+            "--req-name", "Ping"
+        ]);
+
+        Assert.Equal(CliCommand.EnvRequestEdit, result.Command);
+        EnvRequestEditOptions options = Assert.IsType<EnvRequestEditOptions>(result.Options);
+        Assert.Equal("dev", options.EnvName);
+        Assert.Equal("Ping", options.RequestName);
+    }
+
+    [Fact]
+    public void Parse_EnvRequestList_WithoutName_AllowsCurrent()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "request",
+            "list"
+        ]);
+
+        Assert.Equal(CliCommand.EnvRequestList, result.Command);
+        EnvRequestListOptions options = Assert.IsType<EnvRequestListOptions>(result.Options);
+        Assert.Null(options.EnvName);
+    }
+
+    [Fact]
+    public void Parse_EnvSet_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "set",
+            "--name", "dev",
+            "--local"
+        ]);
+
+        Assert.Equal(CliCommand.EnvSet, result.Command);
+        EnvSetOptions options = Assert.IsType<EnvSetOptions>(result.Options);
+        Assert.Equal("dev", options.Name);
+        Assert.True(options.Local);
+    }
 }

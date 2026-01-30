@@ -7,6 +7,7 @@ public sealed record RequestDefinition(
     string Method,
     string Url,
     string? Body,
-    IReadOnlyList<string> QueryParams,
-    IReadOnlyList<string> Headers
+    IReadOnlyList<QueryParamDefinition> QueryParams,
+    IReadOnlyList<string> Headers,
+    AuthConfig Auth
 );
