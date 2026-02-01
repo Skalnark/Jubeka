@@ -4,6 +4,7 @@ using Jubeka.Core.Domain;
 
 namespace Jubeka.CLI.Tests.Infrastructure.Config;
 
+[Collection("ConsoleTests")]
 public class EnvironmentConfigStoreTests
 {
     [Fact]
