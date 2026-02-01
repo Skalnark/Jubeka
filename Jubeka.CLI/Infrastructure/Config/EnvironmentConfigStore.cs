@@ -235,7 +235,16 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
     private static string GetGlobalConfigDirectory()
     {
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string? homeEnv = Environment.GetEnvironmentVariable("HOME");
+        string home = string.IsNullOrWhiteSpace(homeEnv)
+            ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            : homeEnv;
+
+        if (string.IsNullOrWhiteSpace(home))
+        {
+            throw new InvalidOperationException("Unable to determine home directory.");
+        }
+
         return Path.Combine(home, ".config", "jubeka");
     }
 
