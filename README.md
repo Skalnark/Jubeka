@@ -30,7 +30,7 @@ variables:
 
 ```bash
 dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- request --method GET --url "${baseUrl}/pets/{{id}}" \
+ request --method GET --url '${baseUrl}/pets/{{id}}' \
  --header "Authorization: Bearer {{token}}" \
  --env env.yml
 ```
