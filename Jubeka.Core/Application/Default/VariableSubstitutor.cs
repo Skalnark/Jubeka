@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.RegularExpressions;
 using Jubeka.Core.Domain;
 
@@ -43,9 +44,8 @@ public static partial class VariableSubstitutor
         }
 
         HashSet<string> missing = new(StringComparer.OrdinalIgnoreCase);
-        foreach (Match match in PlaceholderRegex().Matches(input))
+        foreach (string key in PlaceholderRegex().Matches(input).Cast<Match>().Select(match => match.Groups["key"].Value.Trim()))
         {
-            string key = match.Groups["key"].Value.Trim();
             if (string.IsNullOrWhiteSpace(key))
             {
                 continue;
