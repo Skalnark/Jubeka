@@ -20,7 +20,9 @@ public sealed class Cli(
     IEnvironmentVariablesLoader environmentVariablesLoader,
     IOpenApiSpecLoader openApiSpecLoader,
     IOpenApiRequestBuilder openApiRequestBuilder,
-    IEnvironmentConfigStore environmentConfigStore)
+    IEnvironmentConfigStore environmentConfigStore,
+    IEnvironmentWizard environmentWizard,
+    IRequestWizard requestWizard)
 {
     public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken)
     {
@@ -190,7 +192,7 @@ public sealed class Cli(
         }
         else
         {
-            config = BuildEnvironmentConfigInteractively(options, "create");
+            config = environmentWizard.BuildEnvironmentConfig(options, "create");
         }
 
         environmentConfigStore.Save(config);
@@ -228,7 +230,7 @@ public sealed class Cli(
         }
 
         EnvConfigOptions wizardOptions = new(options.Name, existing.VarsPath, existing.DefaultOpenApiSource);
-        EnvironmentConfig wizardConfig = BuildEnvironmentConfigInteractively(wizardOptions, "edit");
+        EnvironmentConfig wizardConfig = environmentWizard.BuildEnvironmentConfig(wizardOptions, "edit");
         EnvironmentConfig result = new(wizardConfig.Name, wizardConfig.VarsPath, wizardConfig.DefaultOpenApiSource, existing.Requests);
         environmentConfigStore.Save(result);
         Console.WriteLine($"Environment '{result.Name}' updated.");
@@ -268,7 +270,7 @@ public sealed class Cli(
         }
         else
         {
-            request = BuildRequestDefinitionInteractively(options, vars);
+            request = requestWizard.BuildRequest(options, vars);
         }
         List<RequestDefinition> requests = config.Requests?.ToList() ?? [];
         requests.Add(request);
@@ -357,14 +359,14 @@ public sealed class Cli(
         }
 
         IReadOnlyDictionary<string, string> vars = LoadEnvVarsSafe(config.VarsPath);
-        int index = SelectRequestIndex(config.Requests, options.RequestName);
+        int index = requestWizard.SelectRequestIndex(config.Requests, options.RequestName);
         if (index < 0)
         {
             Console.WriteLine("No request selected.");
             return 0;
         }
 
-        RequestDefinition edited = EditRequestInteractively(config.Requests[index], vars);
+        RequestDefinition edited = requestWizard.EditRequest(config.Requests[index], vars);
         List<RequestDefinition> updatedRequests = config.Requests.ToList();
         updatedRequests[index] = edited;
 
@@ -449,34 +451,6 @@ public sealed class Cli(
         return new RequestDefinition(request.Name, method, url, body, queries, headers, request.Auth);
     }
 
-    private static EnvironmentConfig BuildEnvironmentConfigInteractively(EnvConfigOptions options, string action)
-    {
-        Console.WriteLine($"Starting env {action} wizard:");
-
-        string name = PromptRequired("Name", options.Name);
-        string varsDefault = string.IsNullOrWhiteSpace(options.VarsPath) ? $"{name}.yml" : options.VarsPath;
-        string varsPath = PromptWithDefault("YAML vars path", varsDefault);
-
-        OpenApiSource? source = options.DefaultOpenApiSource;
-        bool? setSpec = PromptYesNo("Set default OpenAPI spec?", source != null);
-        if (setSpec == true)
-        {
-            string kindInput = PromptRequired("Spec source (url|file|raw)", source?.Kind.ToString().ToLowerInvariant() ?? string.Empty);
-            OpenApiSourceKind kind = kindInput switch
-            {
-                "url" => OpenApiSourceKind.Url,
-                "file" => OpenApiSourceKind.File,
-                "raw" => OpenApiSourceKind.Raw,
-                _ => throw new OpenApiSpecificationException("Invalid spec source. Use url, file, or raw.")
-            };
-
-            string value = PromptRequired("Spec value", source?.Value ?? string.Empty);
-            source = new OpenApiSource(kind, value);
-        }
-
-        return new EnvironmentConfig(name, varsPath, source, []);
-    }
-
     private static bool HasEnvCreateInput(EnvConfigOptions options)
     {
         return !string.IsNullOrWhiteSpace(options.Name)
@@ -492,359 +466,6 @@ public sealed class Cli(
                || !string.IsNullOrWhiteSpace(options.Body)
                || (options.QueryParams?.Count ?? 0) > 0
                || (options.Headers?.Count ?? 0) > 0;
-    }
-
-    private static RequestDefinition BuildRequestDefinitionInteractively(EnvRequestAddOptions options, IReadOnlyDictionary<string, string> vars)
-    {
-        Console.WriteLine("Starting request add wizard:");
-
-        string name = PromptRequired("Request name", options.Name);
-        string method = PromptRequired("Method", options.Method ?? "GET");
-        string url = PromptRequired("URL", options.Url);
-        string? body = PromptOptional("Body (optional)", options.Body);
-
-        List<QueryParamDefinition> queries = NormalizeQueryParams(options.QueryParams);
-        ManageQueryParams(queries, vars);
-
-        List<string> headers = options.Headers?.ToList() ?? [];
-        ManageHeaders(headers);
-
-        AuthConfig auth = BuildAuthConfigInteractively(vars);
-
-        return new RequestDefinition(name, method, url, body, queries, headers, auth);
-    }
-
-    private static RequestDefinition EditRequestInteractively(RequestDefinition request, IReadOnlyDictionary<string, string> vars)
-    {
-        string name = request.Name;
-        string method = request.Method;
-        string url = request.Url;
-        string? body = request.Body;
-        List<QueryParamDefinition> queries = request.QueryParams.ToList();
-        List<string> headers = request.Headers.ToList();
-        AuthConfig auth = request.Auth;
-
-        while (true)
-        {
-            Console.WriteLine();
-            Console.WriteLine("Edit request:");
-            Console.WriteLine("1) Name");
-            Console.WriteLine("2) Method");
-            Console.WriteLine("3) URL");
-            Console.WriteLine("4) Body");
-            Console.WriteLine("5) Query params");
-            Console.WriteLine("6) Headers");
-            Console.WriteLine("7) Auth");
-            Console.WriteLine("8) Save");
-            Console.WriteLine("9) Cancel");
-
-            string choice = PromptWithDefault("Select", "8");
-            switch (choice)
-            {
-                case "1":
-                    name = PromptRequired("Name", name);
-                    break;
-                case "2":
-                    method = PromptRequired("Method", method);
-                    break;
-                case "3":
-                    url = PromptRequired("URL", url);
-                    break;
-                case "4":
-                    body = PromptOptional("Body (optional)", body);
-                    break;
-                case "5":
-                    ManageQueryParams(queries, vars);
-                    break;
-                case "6":
-                    ManageHeaders(headers);
-                    break;
-                case "7":
-                    auth = BuildAuthConfigInteractively(vars, auth);
-                    break;
-                case "8":
-                    return new RequestDefinition(name, method, url, body, queries, headers, auth);
-                case "9":
-                    return request;
-                default:
-                    Console.WriteLine("Invalid option.");
-                    break;
-            }
-        }
-    }
-
-    private int SelectRequestIndex(IReadOnlyList<RequestDefinition> requests, string? requestName)
-    {
-        if (!string.IsNullOrWhiteSpace(requestName))
-        {
-            int idx = requests.ToList().FindIndex(r => string.Equals(r.Name, requestName, StringComparison.OrdinalIgnoreCase));
-            return idx;
-        }
-
-        Console.WriteLine("Select a request:");
-        for (int i = 0; i < requests.Count; i++)
-        {
-            Console.WriteLine($"{i + 1}. {requests[i].Name} [{requests[i].Method}] {requests[i].Url}");
-        }
-
-        string input = PromptWithDefault("Enter number (blank to cancel)", string.Empty);
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return -1;
-        }
-
-        if (int.TryParse(input, out int choice) && choice >= 1 && choice <= requests.Count)
-        {
-            return choice - 1;
-        }
-
-        Console.WriteLine("Invalid selection.");
-        return -1;
-    }
-
-    private static void ManageQueryParams(List<QueryParamDefinition> queries, IReadOnlyDictionary<string, string> vars)
-    {
-        while (true)
-        {
-            Console.WriteLine();
-            Console.WriteLine("Query params:");
-            if (queries.Count == 0)
-            {
-                Console.WriteLine("(none)");
-            }
-            else
-            {
-                for (int i = 0; i < queries.Count; i++)
-                {
-                    Console.WriteLine($"{i + 1}. {queries[i].Key}={queries[i].Value}");
-                }
-            }
-
-            Console.WriteLine("1) Add new");
-            Console.WriteLine("2) Change");
-            Console.WriteLine("3) Delete");
-            Console.WriteLine("4) Select existing variable");
-            Console.WriteLine("5) Done");
-
-            string choice = PromptWithDefault("Select", "5");
-            switch (choice)
-            {
-                case "1":
-                    AddQueryParam(queries, vars, allowVarSelection: true);
-                    break;
-                case "2":
-                    ChangeQueryParam(queries, vars);
-                    break;
-                case "3":
-                    DeleteQueryParam(queries);
-                    break;
-                case "4":
-                    AddQueryParam(queries, vars, allowVarSelection: true, forceSelectVar: true);
-                    break;
-                case "5":
-                    return;
-                default:
-                    Console.WriteLine("Invalid option.");
-                    break;
-            }
-        }
-    }
-
-    private static void AddQueryParam(List<QueryParamDefinition> queries, IReadOnlyDictionary<string, string> vars, bool allowVarSelection, bool forceSelectVar = false)
-    {
-        string key = PromptRequired("Query key", null);
-        string value;
-
-        if (allowVarSelection && vars.Count > 0 && (forceSelectVar || PromptYesNo("Use existing variable?", false) == true))
-        {
-            string selected = PromptSelectVariable(vars);
-            value = $"{{{{{selected}}}}}";
-        }
-        else
-        {
-            value = PromptRequired("Query value", null);
-        }
-
-        queries.Add(new QueryParamDefinition(key, value));
-    }
-
-    private static void ChangeQueryParam(List<QueryParamDefinition> queries, IReadOnlyDictionary<string, string> vars)
-    {
-        if (queries.Count == 0)
-        {
-            Console.WriteLine("No query params to change.");
-            return;
-        }
-
-        int index = PromptIndex("Select query param", queries.Count);
-        if (index < 0)
-        {
-            return;
-        }
-
-        QueryParamDefinition current = queries[index];
-        string key = PromptRequired("Query key", current.Key);
-        string value;
-        if (vars.Count > 0 && PromptYesNo("Use existing variable?", false) == true)
-        {
-            string selected = PromptSelectVariable(vars);
-            value = $"{{{{{selected}}}}}";
-        }
-        else
-        {
-            value = PromptRequired("Query value", current.Value);
-        }
-
-        queries[index] = new QueryParamDefinition(key, value);
-    }
-
-    private static void DeleteQueryParam(List<QueryParamDefinition> queries)
-    {
-        if (queries.Count == 0)
-        {
-            Console.WriteLine("No query params to delete.");
-            return;
-        }
-
-        int index = PromptIndex("Select query param to delete", queries.Count);
-        if (index < 0)
-        {
-            return;
-        }
-
-        queries.RemoveAt(index);
-    }
-
-    private static void ManageHeaders(List<string> headers)
-    {
-        while (true)
-        {
-            Console.WriteLine();
-            Console.WriteLine("Headers:");
-            if (headers.Count == 0)
-            {
-                Console.WriteLine("(none)");
-            }
-            else
-            {
-                for (int i = 0; i < headers.Count; i++)
-                {
-                    Console.WriteLine($"{i + 1}. {headers[i]}");
-                }
-            }
-
-            Console.WriteLine("1) Add new");
-            Console.WriteLine("2) Change");
-            Console.WriteLine("3) Delete");
-            Console.WriteLine("4) Done");
-
-            string choice = PromptWithDefault("Select", "4");
-            switch (choice)
-            {
-                case "1":
-                    headers.Add(PromptRequired("Header (Name: Value)", null));
-                    break;
-                case "2":
-                    if (headers.Count == 0)
-                    {
-                        Console.WriteLine("No headers to change.");
-                        break;
-                    }
-                    int index = PromptIndex("Select header", headers.Count);
-                    if (index >= 0)
-                    {
-                        headers[index] = PromptRequired("Header (Name: Value)", headers[index]);
-                    }
-                    break;
-                case "3":
-                    if (headers.Count == 0)
-                    {
-                        Console.WriteLine("No headers to delete.");
-                        break;
-                    }
-                    int deleteIndex = PromptIndex("Select header to delete", headers.Count);
-                    if (deleteIndex >= 0)
-                    {
-                        headers.RemoveAt(deleteIndex);
-                    }
-                    break;
-                case "4":
-                    return;
-                default:
-                    Console.WriteLine("Invalid option.");
-                    break;
-            }
-        }
-    }
-
-    private static AuthConfig BuildAuthConfigInteractively(IReadOnlyDictionary<string, string> vars, AuthConfig? current = null)
-    {
-        AuthMethod method = current?.Method ?? AuthMethod.Inherit;
-        Console.WriteLine();
-        Console.WriteLine("Auth method:");
-        Console.WriteLine("1) Inherit");
-        Console.WriteLine("2) None");
-        Console.WriteLine("3) Basic");
-        Console.WriteLine("4) Bearer");
-
-        string choice = PromptWithDefault("Select", ((int)method + 1).ToString());
-        method = choice switch
-        {
-            "1" => AuthMethod.Inherit,
-            "2" => AuthMethod.None,
-            "3" => AuthMethod.Basic,
-            "4" => AuthMethod.Bearer,
-            _ => method
-        };
-
-        return method switch
-        {
-            AuthMethod.Basic => new AuthConfig(method,
-                Username: PromptValueOrVariable("Username", vars, current?.Username),
-                Password: PromptValueOrVariable("Password", vars, current?.Password)),
-            AuthMethod.Bearer => new AuthConfig(method,
-                Token: PromptValueOrVariable("Token", vars, current?.Token)),
-            _ => new AuthConfig(method)
-        };
-    }
-
-    private static string PromptValueOrVariable(string label, IReadOnlyDictionary<string, string> vars, string? defaultValue)
-    {
-        if (vars.Count > 0 && PromptYesNo($"Use existing variable for {label}?", false) == true)
-        {
-            string selected = PromptSelectVariable(vars);
-            return $"{{{{{selected}}}}}";
-        }
-
-        return PromptRequired(label, defaultValue);
-    }
-
-    private static string PromptSelectVariable(IReadOnlyDictionary<string, string> vars)
-    {
-        List<string> keys = vars.Keys.OrderBy(k => k).ToList();
-        for (int i = 0; i < keys.Count; i++)
-        {
-            Console.WriteLine($"{i + 1}. {keys[i]}");
-        }
-
-        int index = PromptIndex("Select variable", keys.Count);
-        if (index < 0)
-        {
-            throw new OpenApiSpecificationException("No variable selected.");
-        }
-
-        return keys[index];
-    }
-
-    private static int PromptIndex(string label, int max)
-    {
-        string input = PromptWithDefault($"{label} (1-{max}, blank to cancel)", string.Empty);
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return -1;
-        }
-
-        return int.TryParse(input, out int index) && index >= 1 && index <= max ? index - 1 : -1;
     }
 
     private static List<QueryParamDefinition> NormalizeQueryParams(IReadOnlyList<string>? raw)
@@ -885,75 +506,5 @@ public sealed class Cli(
             }
             return new Dictionary<string, string>();
         }
-    }
-
-    private static string PromptWithDefault(string label, string? defaultValue)
-    {
-        string prompt = string.IsNullOrWhiteSpace(defaultValue)
-            ? $"{label}: "
-            : $"{label} [{defaultValue}]: ";
-        Console.Write(prompt);
-        string? input = Console.ReadLine();
-
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return defaultValue ?? string.Empty;
-        }
-
-        return input.Trim();
-    }
-
-    private static string? PromptOptional(string label, string? defaultValue)
-    {
-        string prompt = string.IsNullOrWhiteSpace(defaultValue)
-            ? $"{label}: "
-            : $"{label} [{defaultValue}]: ";
-        Console.Write(prompt);
-        string? input = Console.ReadLine();
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return defaultValue;
-        }
-
-        return input.Trim();
-    }
-
-    private static string PromptRequired(string label, string? defaultValue)
-    {
-        while (true)
-        {
-            string prompt = string.IsNullOrWhiteSpace(defaultValue)
-                ? $"{label}: "
-                : $"{label} [{defaultValue}]: ";
-            Console.Write(prompt);
-            string? input = Console.ReadLine();
-
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                if (!string.IsNullOrWhiteSpace(defaultValue))
-                {
-                    return defaultValue;
-                }
-
-                Console.WriteLine($"{label} is required.");
-                continue;
-            }
-
-            return input.Trim();
-        }
-    }
-
-    private static bool? PromptYesNo(string label, bool? defaultValue)
-    {
-        string suffix = defaultValue == true ? "[Y/n]" : defaultValue == false ? "[y/N]" : "[y/n]";
-        Console.Write($"{label} {suffix}: ");
-        string? input = Console.ReadLine();
-
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return defaultValue;
-        }
-
-        return input.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase);
     }
 }

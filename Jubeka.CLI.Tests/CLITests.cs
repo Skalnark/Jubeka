@@ -19,8 +19,10 @@ public class CLITests
         ThrowingOpenApiSpecLoader specLoader = new();
         ThrowingOpenApiRequestBuilder openApiRequestBuilder = new();
         StubEnvironmentConfigStore envStore = new();
+        ThrowingEnvironmentWizard envWizard = new();
+        ThrowingRequestWizard requestWizard = new();
 
-        Cli cli = new(helpPrinter, parser, requestBuilder, responseWriter, envLoader, specLoader, openApiRequestBuilder, envStore);
+        Cli cli = new(helpPrinter, parser, requestBuilder, responseWriter, envLoader, specLoader, openApiRequestBuilder, envStore, envWizard, requestWizard);
 
         int result = await cli.RunAsync(["--help"], CancellationToken.None);
 
@@ -94,6 +96,32 @@ public class CLITests
         public void SetCurrent(string name)
         {
             throw new InvalidOperationException("Environment config store should not be called for help flow.");
+        }
+    }
+
+    private sealed class ThrowingEnvironmentWizard : IEnvironmentWizard
+    {
+        public EnvironmentConfig BuildEnvironmentConfig(EnvConfigOptions options, string action)
+        {
+            throw new InvalidOperationException("Environment wizard should not be called for help flow.");
+        }
+    }
+
+    private sealed class ThrowingRequestWizard : IRequestWizard
+    {
+        public RequestDefinition BuildRequest(EnvRequestAddOptions options, IReadOnlyDictionary<string, string> vars)
+        {
+            throw new InvalidOperationException("Request wizard should not be called for help flow.");
+        }
+
+        public RequestDefinition EditRequest(RequestDefinition request, IReadOnlyDictionary<string, string> vars)
+        {
+            throw new InvalidOperationException("Request wizard should not be called for help flow.");
+        }
+
+        public int SelectRequestIndex(IReadOnlyList<RequestDefinition> requests, string? requestName)
+        {
+            throw new InvalidOperationException("Request wizard should not be called for help flow.");
         }
     }
 }

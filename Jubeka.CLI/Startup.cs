@@ -14,6 +14,9 @@ public static class Startup
     {
         HelpPrinter helpPrinter = new();
         ArgumentParser parser = new();
+        ConsolePrompt prompt = new();
+        EnvironmentWizard environmentWizard = new(prompt);
+        RequestWizard requestWizard = new(prompt);
 
         QueryParser queryParser = new();
         HeaderParser headerParser = new();
@@ -34,6 +37,8 @@ public static class Startup
             environmentVariablesLoader,
             openApiSpecLoader,
             openApiRequestBuilder,
-            environmentConfigStore);
+            environmentConfigStore,
+            environmentWizard,
+            requestWizard);
     }
 }
