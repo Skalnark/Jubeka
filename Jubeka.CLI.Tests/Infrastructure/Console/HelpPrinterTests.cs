@@ -23,6 +23,14 @@ public class HelpPrinterTests
 
             Assert.Equal(0, code);
             Assert.Contains("Jubeka CLI", output.ToString());
+            Assert.Contains("openapi request", output.ToString());
+            Assert.Contains("env create", output.ToString());
+            Assert.Contains("env edit", output.ToString());
+            Assert.Contains("env set", output.ToString());
+            Assert.Contains("request add", output.ToString());
+            Assert.Contains("request list", output.ToString());
+            Assert.Contains("request edit", output.ToString());
+            Assert.Contains("request exec", output.ToString());
             Assert.Equal(string.Empty, error.ToString());
         }
         finally

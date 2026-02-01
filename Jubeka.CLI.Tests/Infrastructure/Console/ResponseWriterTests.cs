@@ -32,7 +32,7 @@ public class ResponseWriterTests
             writer.Write(response, true);
 
             string text = output.ToString();
-            Assert.Contains("HTTP OK OK", text);
+            Assert.Contains("HTTP 200 OK", text);
             Assert.Contains("X-Test: v1", text);
             Assert.Contains("Content-Type: text/plain", text);
             Assert.Contains("formatted", text);
