@@ -184,9 +184,11 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         string requestsDir = Path.Combine(envDirectory, RequestsDirectory);
         Directory.CreateDirectory(requestsDir);
 
+        HashSet<string> usedFileNames = new(StringComparer.OrdinalIgnoreCase);
+
         foreach (RequestDefinition request in requests)
         {
-            string fileName = $"{SanitizeFileName(request.Name)}.yml";
+            string fileName = EnsureUniqueFileName(SanitizeFileName(request.Name), requestsDir, usedFileNames);
             string path = Path.Combine(requestsDir, fileName);
             RequestDefinitionDto dto = RequestDefinitionDto.From(request);
             string yaml = YamlSerializer.Serialize(dto);
@@ -231,6 +233,21 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         }
 
         return string.IsNullOrWhiteSpace(name) ? "request" : name;
+    }
+
+    private static string EnsureUniqueFileName(string baseName, string directory, HashSet<string> usedFileNames)
+    {
+        string candidate = $"{baseName}.yml";
+        int counter = 1;
+
+        while (usedFileNames.Contains(candidate) || File.Exists(Path.Combine(directory, candidate)))
+        {
+            candidate = $"{baseName}-{counter}.yml";
+            counter++;
+        }
+
+        usedFileNames.Add(candidate);
+        return candidate;
     }
 
     private static string GetGlobalConfigDirectory()
