@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Jubeka.Core.Domain;
@@ -81,9 +82,8 @@ public sealed partial class OpenApiRequestBuilder : IOpenApiRequestBuilder
     private static string ResolvePath(string pathTemplate, IReadOnlyDictionary<string, string> vars, IList<OpenApiParameter> parameters)
     {
         string resolved = pathTemplate;
-        foreach (Match match in PathParameterRegex().Matches(pathTemplate))
+        foreach (string name in PathParameterRegex().Matches(pathTemplate).Cast<Match>().Select(match => match.Groups["name"].Value))
         {
-            string name = match.Groups["name"].Value;
             if (!vars.TryGetValue(name, out string? value))
             {
                 bool required = parameters.Any(p => p.In == ParameterLocation.Path && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase) && p.Required);
