@@ -7,7 +7,7 @@ PUBLISH_DIR ?= ./out
 
 help:
 	@echo "Targets:"
-	@echo "  project   Build the CLI project (Debug)"
+	@echo "  build   Build the CLI project (Debug)"
 	@echo "  release   Publish Release binary (single-file)"
 	@echo "  publish   Publish with custom vars"
 	@echo ""

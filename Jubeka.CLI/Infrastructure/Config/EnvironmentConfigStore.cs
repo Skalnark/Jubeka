@@ -199,27 +199,18 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
     private static List<RequestDefinition> ReadRequestFiles(string envDirectory, IReadOnlyList<string>? requestFiles)
     {
-        List<RequestDefinition> requests = new();
         if (requestFiles == null)
         {
-            return requests;
+            return [];
         }
 
-        foreach (string relativePath in requestFiles)
-        {
-            string path = Path.Combine(envDirectory, relativePath);
-            if (!File.Exists(path))
-            {
-                continue;
-            }
-
-            string yaml = File.ReadAllText(path);
-            RequestDefinitionDto? dto = YamlDeserializer.Deserialize<RequestDefinitionDto>(yaml);
-            if (dto != null)
-            {
-                requests.Add(NormalizeRequest(dto.ToRequestDefinition()));
-            }
-        }
+        List<RequestDefinition> requests = [.. requestFiles
+            .Select(relativePath => Path.Combine(envDirectory, relativePath))
+            .Where(path => File.Exists(path))
+            .Select(File.ReadAllText)
+            .Select(YamlDeserializer.Deserialize<RequestDefinitionDto>)
+            .Where(dto => dto is not null)
+            .Select(dto => NormalizeRequest(dto.ToRequestDefinition()))];
 
         return requests;
     }
