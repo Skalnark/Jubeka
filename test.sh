@@ -26,6 +26,9 @@ print_fail() {
 cleanup() {
 	rm -rf "$TMP_DIR"
 	rm -rf "$HOME/.config/jubeka/$ENV_NAME"
+	rm -f "$HOME/.config/jubeka/current.json"
+	# If nothing else remains, remove the top-level config directory to avoid polluting user config
+	rmdir "$HOME/.config/jubeka" 2>/dev/null || true
 }
 trap cleanup EXIT
 trap 'print_fail' ERR
