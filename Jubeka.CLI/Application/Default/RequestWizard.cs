@@ -171,7 +171,12 @@ public sealed class RequestWizard(IPrompt prompt) : IRequestWizard
 
         if (allowVarSelection && vars.Count > 0 && (forceSelectVar || prompt.PromptYesNo("Use existing variable?", false) == true))
         {
-            string selected = PromptSelectVariable(vars);
+            string? selected = PromptSelectVariable(vars);
+            if (selected == null)
+            {
+                return;
+            }
+
             value = $"{{{{{selected}}}}}";
         }
         else
@@ -201,7 +206,12 @@ public sealed class RequestWizard(IPrompt prompt) : IRequestWizard
         string value;
         if (vars.Count > 0 && prompt.PromptYesNo("Use existing variable?", false) == true)
         {
-            string selected = PromptSelectVariable(vars);
+            string? selected = PromptSelectVariable(vars);
+            if (selected == null)
+            {
+                return;
+            }
+
             value = $"{{{{{selected}}}}}";
         }
         else
@@ -326,14 +336,17 @@ public sealed class RequestWizard(IPrompt prompt) : IRequestWizard
     {
         if (vars.Count > 0 && prompt.PromptYesNo($"Use existing variable for {label}?", false) == true)
         {
-            string selected = PromptSelectVariable(vars);
-            return $"{{{{{selected}}}}}";
+            string? selected = PromptSelectVariable(vars);
+            if (selected != null)
+            {
+                return $"{{{{{selected}}}}}";
+            }
         }
 
         return prompt.PromptRequired(label, defaultValue);
     }
 
-    private string PromptSelectVariable(IReadOnlyDictionary<string, string> vars)
+    private string? PromptSelectVariable(IReadOnlyDictionary<string, string> vars)
     {
         List<string> keys = vars.Keys.OrderBy(k => k).ToList();
         for (int i = 0; i < keys.Count; i++)
@@ -342,12 +355,7 @@ public sealed class RequestWizard(IPrompt prompt) : IRequestWizard
         }
 
         int index = PromptIndex("Select variable", keys.Count);
-        if (index < 0)
-        {
-            throw new OpenApiSpecificationException("No variable selected.");
-        }
-
-        return keys[index];
+        return index < 0 ? null : keys[index];
     }
 
     private int PromptIndex(string label, int max)

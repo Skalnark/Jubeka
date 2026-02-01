@@ -63,6 +63,32 @@ public class RequestWizardTests
         Assert.NotSame(original, edited);
     }
 
+    [Fact]
+    public void BuildRequest_WhenVariableSelectionCancelled_KeepsWizardAlive()
+    {
+        StubPrompt prompt = new(
+            required: ["ping", "GET", "https://api.example.com/ping", "id"],
+            optional: [null],
+            withDefault: ["4", string.Empty, "5", "4", "1"]); // select existing var, cancel selection, done queries, done headers, auth inherit
+        RequestWizard wizard = new(prompt);
+        EnvRequestAddOptions options = new(
+            EnvName: null,
+            Name: null,
+            Method: null,
+            Url: null,
+            Body: null,
+            QueryParams: Array.Empty<string>(),
+            Headers: Array.Empty<string>());
+
+        RequestDefinition request = wizard.BuildRequest(options, new Dictionary<string, string>
+        {
+            { "id", "123" }
+        });
+
+        Assert.Empty(request.QueryParams);
+        Assert.Equal("ping", request.Name);
+    }
+
     private sealed class StubPrompt : IPrompt
     {
         private readonly Queue<string> _required;
