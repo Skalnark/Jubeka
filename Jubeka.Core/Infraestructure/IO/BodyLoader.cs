@@ -11,10 +11,10 @@ public sealed class BodyLoader : IBodyLoader
             return string.Empty;
         }
 
-        if(args.StartsWith("@", StringComparison.Ordinal))
+        if (args.StartsWith("@", StringComparison.Ordinal))
         {
             string filePath = args[1..];
-            if(!File.Exists(filePath))
+            if (!File.Exists(filePath))
             {
                 throw new FileNotFoundException("Body file not found.", filePath);
             }

@@ -16,7 +16,7 @@ IUriBuilderHelper uriBuilder) : IRequestDataBuilder
         IReadOnlyList<(string Key, string Value)> headers = headerParser.Parse(options.Headers, vars);
         Uri uri = uriBuilder.Build(options.Url, vars, queryParameters);
 
-        HttpMethod method = new (options.Method.ToUpperInvariant());
+        HttpMethod method = new(options.Method.ToUpperInvariant());
         return new RequestData(method, uri, headers, body);
     }
 

@@ -10,7 +10,7 @@ public static class HttpRequestExecutor
         using HttpClient httpClient = new() { Timeout = timeout };
         using HttpRequestMessage httpRequest = new(new HttpMethod(requestData.Method.ToString()), requestData.Uri);
 
-        if(!string.IsNullOrWhiteSpace(requestData.Body))
+        if (!string.IsNullOrWhiteSpace(requestData.Body))
         {
             httpRequest.Content = new StringContent(requestData.Body);
             /* I forgot to implement content headers in RequestData, so this is commented out for now.
@@ -26,10 +26,10 @@ public static class HttpRequestExecutor
 
         foreach ((string key, string value) in requestData.Headers)
         {
-            if(!httpRequest.Headers.TryAddWithoutValidation(key, value))
+            if (!httpRequest.Headers.TryAddWithoutValidation(key, value))
             {
-               httpRequest.Content ??= new StringContent(string.Empty);
-               httpRequest.Content.Headers.TryAddWithoutValidation(key, value); 
+                httpRequest.Content ??= new StringContent(string.Empty);
+                httpRequest.Content.Headers.TryAddWithoutValidation(key, value);
             }
         }
 

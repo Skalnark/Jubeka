@@ -21,7 +21,7 @@ public sealed class QueryParser : IQueryParser
 
                 string substitutedParam = VariableSubstitutor.Substitute(value, vars);
 
-                if(string.IsNullOrEmpty(key) || string.IsNullOrEmpty(substitutedParam))
+                if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(substitutedParam))
                 {
                     continue;
                 }
@@ -35,7 +35,7 @@ public sealed class QueryParser : IQueryParser
 
     public List<(string Key, string Value)> ParseQueryParametersFromUrl(string rawUrl)
     {
-        Uri uri = new (rawUrl);
+        Uri uri = new(rawUrl);
         NameValueCollection queryCollection = System.Web.HttpUtility.ParseQueryString(uri.Query);
         List<(string Key, string Value)> result = [];
 

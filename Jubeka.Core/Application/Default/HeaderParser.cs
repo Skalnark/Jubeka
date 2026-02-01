@@ -21,7 +21,7 @@ public sealed class HeaderParser : IHeaderParser
             string value = rawHeader.Substring(separatorIndex + 1).Trim();
             string substitutedValue = VariableSubstitutor.Substitute(value, vars);
 
-            if(string.IsNullOrEmpty(key) || string.IsNullOrEmpty(substitutedValue))
+            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(substitutedValue))
             {
                 continue;
             }

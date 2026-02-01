@@ -17,7 +17,7 @@ namespace Jubeka.Core.Tests.Application.Default
             Assert.Equal(("Header1", "Value1"), parsed[0]);
             Assert.Equal(("Header2", "Value2"), parsed[1]);
         }
-        
+
         [Fact]
         public void InvalidHeaders_AreSkipped()
         {

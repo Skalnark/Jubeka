@@ -42,7 +42,7 @@ paths:
     [Fact]
     public async Task LoadAsync_TabIndentedRaw_ParsesDocument()
     {
-      string raw = """
+        string raw = """
   openapi: 3.0.0
   info:
   	title: Test
@@ -56,10 +56,10 @@ paths:
   					description: ok
   """;
 
-      OpenApiSpecLoader loader = new();
-      OpenApiDocument doc = await loader.LoadAsync(new OpenApiSource(OpenApiSourceKind.Raw, raw), CancellationToken.None);
+        OpenApiSpecLoader loader = new();
+        OpenApiDocument doc = await loader.LoadAsync(new OpenApiSource(OpenApiSourceKind.Raw, raw), CancellationToken.None);
 
-      Assert.NotNull(doc);
-      Assert.True(doc.Paths.ContainsKey("/ping"));
+        Assert.NotNull(doc);
+        Assert.True(doc.Paths.ContainsKey("/ping"));
     }
 }

@@ -118,14 +118,14 @@ public sealed class Cli(
         string? envPath = options.EnvPath;
 
         string? envName = options.EnvName;
-            if (string.IsNullOrWhiteSpace(envName))
+        if (string.IsNullOrWhiteSpace(envName))
         {
             envName = ResolveCurrentEnv(null);
         }
 
         if (!string.IsNullOrWhiteSpace(envName))
         {
-                EnvironmentConfig? config = environmentConfigStore.Get(envName);
+            EnvironmentConfig? config = environmentConfigStore.Get(envName);
             if (config == null)
             {
                 throw new OpenApiSpecificationException($"Environment config not found: {envName}");
@@ -169,7 +169,7 @@ public sealed class Cli(
             return explicitName;
         }
 
-            return environmentConfigStore.GetCurrent();
+        return environmentConfigStore.GetCurrent();
     }
 
     private int RunEnvCreate(EnvConfigOptions options)
