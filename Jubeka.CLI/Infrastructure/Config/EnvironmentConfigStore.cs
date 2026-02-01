@@ -27,13 +27,13 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         .IgnoreUnmatchedProperties()
         .Build();
 
-    public EnvironmentConfig? Get(string name, string? baseDirectory = null)
+    public EnvironmentConfig? Get(string name)
     {
         string globalDir = GetGlobalEnvDirectory(name);
         return LoadFromDirectory(globalDir);
     }
 
-    public void Save(EnvironmentConfig config, string? baseDirectory = null)
+    public void Save(EnvironmentConfig config)
     {
         string envDirectory = GetGlobalEnvDirectory(config.Name);
         Directory.CreateDirectory(envDirectory);
@@ -54,7 +54,7 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         File.WriteAllText(configPath, json);
     }
 
-    public string? GetCurrent(string? baseDirectory = null)
+    public string? GetCurrent()
     {
         string globalPath = GetGlobalCurrentPath();
         if (!File.Exists(globalPath))
@@ -67,7 +67,7 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         return current?.Name;
     }
 
-    public void SetCurrent(string name, string? baseDirectory = null)
+    public void SetCurrent(string name)
     {
         string directory = GetGlobalConfigDirectory();
         Directory.CreateDirectory(directory);

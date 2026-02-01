@@ -118,14 +118,14 @@ public sealed class Cli(
         string? envPath = options.EnvPath;
 
         string? envName = options.EnvName;
-        if (string.IsNullOrWhiteSpace(envName))
+            if (string.IsNullOrWhiteSpace(envName))
         {
             envName = ResolveCurrentEnv(null);
         }
 
         if (!string.IsNullOrWhiteSpace(envName))
         {
-            EnvironmentConfig? config = environmentConfigStore.Get(envName, Directory.GetCurrentDirectory());
+                EnvironmentConfig? config = environmentConfigStore.Get(envName);
             if (config == null)
             {
                 throw new OpenApiSpecificationException($"Environment config not found: {envName}");
@@ -150,14 +150,14 @@ public sealed class Cli(
 
     private int RunEnvSet(EnvSetOptions options)
     {
-        EnvironmentConfig? config = environmentConfigStore.Get(options.Name, Directory.GetCurrentDirectory());
+        EnvironmentConfig? config = environmentConfigStore.Get(options.Name);
         if (config == null)
         {
             Console.Error.WriteLine($"Environment config not found: {options.Name}");
             return 1;
         }
 
-        environmentConfigStore.SetCurrent(options.Name, Directory.GetCurrentDirectory());
+        environmentConfigStore.SetCurrent(options.Name);
         Console.WriteLine($"Current environment set to '{options.Name}'.");
         return 0;
     }
@@ -169,7 +169,7 @@ public sealed class Cli(
             return explicitName;
         }
 
-        return environmentConfigStore.GetCurrent(Directory.GetCurrentDirectory());
+            return environmentConfigStore.GetCurrent();
     }
 
     private int RunEnvCreate(EnvConfigOptions options)
@@ -193,24 +193,24 @@ public sealed class Cli(
             config = BuildEnvironmentConfigInteractively(options, "create");
         }
 
-        environmentConfigStore.Save(config, Directory.GetCurrentDirectory());
+        environmentConfigStore.Save(config);
         Console.WriteLine($"Environment '{config.Name}' created.");
         return 0;
     }
 
     private int RunEnvUpdate(EnvConfigOptions options)
     {
-        EnvironmentConfig? existing = environmentConfigStore.Get(options.Name, Directory.GetCurrentDirectory());
+        EnvironmentConfig? existing = environmentConfigStore.Get(options.Name);
         IReadOnlyList<RequestDefinition> requests = existing?.Requests ?? [];
         EnvironmentConfig config = new(options.Name, options.VarsPath, options.DefaultOpenApiSource, requests);
-        environmentConfigStore.Save(config, Directory.GetCurrentDirectory());
+        environmentConfigStore.Save(config);
         Console.WriteLine($"Environment '{config.Name}' updated.");
         return 0;
     }
 
     private int RunEnvEdit(EnvEditOptions options)
     {
-        EnvironmentConfig? existing = environmentConfigStore.Get(options.Name, Directory.GetCurrentDirectory());
+        EnvironmentConfig? existing = environmentConfigStore.Get(options.Name);
         if (existing == null)
         {
             Console.Error.WriteLine($"Environment config not found: {options.Name}");
@@ -222,7 +222,7 @@ public sealed class Cli(
             string varsPath = string.IsNullOrWhiteSpace(options.VarsPath) ? existing.VarsPath : options.VarsPath;
             OpenApiSource? source = options.DefaultOpenApiSource ?? existing.DefaultOpenApiSource;
             EnvironmentConfig updated = new(options.Name, varsPath, source, existing.Requests);
-            environmentConfigStore.Save(updated, Directory.GetCurrentDirectory());
+            environmentConfigStore.Save(updated);
             Console.WriteLine($"Environment '{updated.Name}' updated.");
             return 0;
         }
@@ -230,7 +230,7 @@ public sealed class Cli(
         EnvConfigOptions wizardOptions = new(options.Name, existing.VarsPath, existing.DefaultOpenApiSource);
         EnvironmentConfig wizardConfig = BuildEnvironmentConfigInteractively(wizardOptions, "edit");
         EnvironmentConfig result = new(wizardConfig.Name, wizardConfig.VarsPath, wizardConfig.DefaultOpenApiSource, existing.Requests);
-        environmentConfigStore.Save(result, Directory.GetCurrentDirectory());
+        environmentConfigStore.Save(result);
         Console.WriteLine($"Environment '{result.Name}' updated.");
         return 0;
     }
@@ -244,7 +244,7 @@ public sealed class Cli(
             return 1;
         }
 
-        EnvironmentConfig? config = environmentConfigStore.Get(envName, Directory.GetCurrentDirectory());
+        EnvironmentConfig? config = environmentConfigStore.Get(envName);
         if (config == null)
         {
             Console.Error.WriteLine($"Environment config not found: {envName}");
@@ -274,7 +274,7 @@ public sealed class Cli(
         requests.Add(request);
 
         EnvironmentConfig updated = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, requests);
-        environmentConfigStore.Save(updated, Directory.GetCurrentDirectory());
+        environmentConfigStore.Save(updated);
         Console.WriteLine($"Request '{request.Name}' added to '{config.Name}'.");
         return 0;
     }
@@ -288,7 +288,7 @@ public sealed class Cli(
             return 1;
         }
 
-        EnvironmentConfig? config = environmentConfigStore.Get(envName, Directory.GetCurrentDirectory());
+        EnvironmentConfig? config = environmentConfigStore.Get(envName);
         if (config == null)
         {
             Console.Error.WriteLine($"Environment config not found: {envName}");
@@ -319,7 +319,7 @@ public sealed class Cli(
             return 1;
         }
 
-        EnvironmentConfig? config = environmentConfigStore.Get(envName, Directory.GetCurrentDirectory());
+        EnvironmentConfig? config = environmentConfigStore.Get(envName);
         if (config == null)
         {
             Console.Error.WriteLine($"Environment config not found: {envName}");
@@ -351,7 +351,7 @@ public sealed class Cli(
             List<RequestDefinition> inlineRequests = config.Requests.ToList();
             inlineRequests[inlineIndex] = updatedRequest;
             EnvironmentConfig inlineConfig = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, inlineRequests);
-            environmentConfigStore.Save(inlineConfig, Directory.GetCurrentDirectory());
+            environmentConfigStore.Save(inlineConfig);
             Console.WriteLine($"Request '{updatedRequest.Name}' updated in '{config.Name}'.");
             return 0;
         }
@@ -369,7 +369,7 @@ public sealed class Cli(
         updatedRequests[index] = edited;
 
         EnvironmentConfig updated = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, updatedRequests);
-        environmentConfigStore.Save(updated, Directory.GetCurrentDirectory());
+        environmentConfigStore.Save(updated);
         Console.WriteLine($"Request '{edited.Name}' updated in '{config.Name}'.");
         return 0;
     }
@@ -389,7 +389,7 @@ public sealed class Cli(
             return 1;
         }
 
-        EnvironmentConfig? config = environmentConfigStore.Get(envName, Directory.GetCurrentDirectory());
+        EnvironmentConfig? config = environmentConfigStore.Get(envName);
         if (config == null)
         {
             Console.Error.WriteLine($"Environment config not found: {envName}");
