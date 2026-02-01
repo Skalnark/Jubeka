@@ -46,10 +46,6 @@ public sealed class Cli(
                 CliCommand.EnvCreate => RunEnvCreate((EnvConfigOptions)parseResult.Options),
                 CliCommand.EnvUpdate => RunEnvUpdate((EnvConfigOptions)parseResult.Options),
                 CliCommand.EnvEdit => RunEnvEdit((EnvEditOptions)parseResult.Options),
-                CliCommand.EnvRequestAdd => RunEnvRequestAdd((EnvRequestAddOptions)parseResult.Options),
-                CliCommand.EnvRequestList => RunEnvRequestList((EnvRequestListOptions)parseResult.Options),
-                CliCommand.EnvRequestEdit => RunEnvRequestEdit((EnvRequestEditOptions)parseResult.Options),
-                CliCommand.EnvRequestExec => await RunEnvRequestExecAsync((EnvRequestExecOptions)parseResult.Options, cancellationToken).ConfigureAwait(false),
                 CliCommand.EnvSet => RunEnvSet((EnvSetOptions)parseResult.Options),
                 _ => helpPrinter.Print("Unknown command.")
             };

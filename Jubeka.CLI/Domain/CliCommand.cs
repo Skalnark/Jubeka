@@ -11,9 +11,5 @@ public enum CliCommand
     EnvCreate,
     EnvUpdate,
     EnvEdit,
-    EnvRequestAdd,
-    EnvRequestList,
-    EnvRequestEdit,
-    EnvRequestExec,
     EnvSet
 }
