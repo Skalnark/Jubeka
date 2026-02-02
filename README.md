@@ -2,6 +2,33 @@
 
 Jubeka is a REST client for making HTTP requests, testing APIs, and automating workflows.
 
+## Development goals
+
+- [DONE] A core library that can be used for different User Interfaces.
+- [WIP] CLI tool for sending HTTP requests with variable substitution and OpenAPI support.
+- [TBD] GUI application.
+- [TBD] API to sync environment configs and collections across devices.
+  - [TBD] User authentication and account management.
+  - [TBD] Web application for managing environments and collections.
+
+## Building
+
+This project is using a Makefile for building.
+
+Targets:
+
+build   Build the CLI project (Debug)
+release   Publish Release binary (single-file)
+publish   Publish with custom vars
+
+### Examples
+
+``` bash
+make release
+make release RUNTIME=linux-arm64
+make publish PROJECT=Jubeka.CLI/Jubeka.CLI.csproj RUNTIME=linux-x64 PUBLISH_DIR=./your_dir"
+```
+
 ## Features
 
 - Send HTTP requests with headers, query parameters, and request bodies.
@@ -14,8 +41,7 @@ Jubeka is a REST client for making HTTP requests, testing APIs, and automating w
 ### Basic request
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- request --method GET --url https://api.example.com/ping
+jubeka-cli request --method GET --url https://api.example.com/ping
 ```
 
 ### Use environment variables from YAML
@@ -29,8 +55,7 @@ variables:
 ```
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- request --method GET --url '${baseUrl}/pets/{{id}}' \
+jubeka-cli request --method GET --url '${baseUrl}/pets/{{id}}' \
  --header "Authorization: Bearer {{token}}" \
  --env env.yml
 ```
@@ -38,8 +63,7 @@ dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
 ### OpenAPI request by operationId
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- openapi request --operation getPet \
+jubeka-cli openapi request --operation getPet \
  --spec-url https://example.com/openapi.yaml \
  --env env.yml
 ```
@@ -49,29 +73,25 @@ dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
 Create or update a named environment configuration (stored in `$HOME/.config/jubeka/NAME/config.json`):
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- env create --name dev --vars env.yml --spec-url https://example.com/openapi.yaml
+jubeka-cli env create --name dev --vars env.yml --spec-url https://example.com/openapi.yaml
 ```
 
 Edit an environment configuration (wizard):
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- env edit --name dev
+jubeka-cli env edit --name dev
 ```
 
 Edit an environment configuration inline:
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- env edit --name dev --inline --vars env.yml
+jubeka-cli env edit --name dev --inline --vars env.yml
 ```
 
 Set the current environment (so you can omit `--name` in env commands):
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- env set --name dev
+jubeka-cli env set --name dev
 ```
 
 If the wizard leaves the vars path empty, it defaults to `NAME.yml`. Default OpenAPI spec is optional.
@@ -79,8 +99,7 @@ If the wizard leaves the vars path empty, it defaults to `NAME.yml`. Default Ope
 Use a named environment when invoking OpenAPI requests:
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- openapi request --operation getPet --env-name dev
+jubeka-cli openapi request --operation getPet --env-name dev
 ```
 
 ### Add requests to a collection
@@ -88,36 +107,31 @@ dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
 Add a request to an environment's collection interactively:
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- request add --name dev
+jubeka-cli request add --name dev
 ```
 
 If you set a current environment, you can omit `--name`:
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- request add
+jubeka-cli request add
 ```
 
 List requests in a collection:
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- request list --name dev
+jubeka-cli request list --name dev
 ```
 
 Edit a request from the list:
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- request edit --name dev
+jubeka-cli request edit --name dev
 ```
 
 Execute a stored request:
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- request exec --name dev --req-name Ping
+jubeka-cli request exec --name dev --req-name Ping
 ```
 
 ## YAML variables format
@@ -131,8 +145,3 @@ variables:
 ```
 
 You can use `${var}` or `{{var}}` in URLs, headers, query parameters, and request bodies.
-
-## Notes
-
-- Missing required variables or invalid OpenAPI specifications will surface clear error messages.
-- OpenAPI base URL can come from the spec `servers` section or the `baseUrl` variable.
