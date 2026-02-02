@@ -277,6 +277,22 @@ public class ArgumentParserTests
     }
 
     [Fact]
+    public void Parse_EnvDelete_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "delete",
+            "--name", "dev"
+        ]);
+
+        Assert.Equal(CliCommand.EnvDelete, result.Command);
+        EnvDeleteOptions options = Assert.IsType<EnvDeleteOptions>(result.Options);
+        Assert.Equal("dev", options.Name);
+    }
+
+    [Fact]
     public void Parse_RequestExec_ParsesOptions()
     {
         ArgumentParser parser = new();

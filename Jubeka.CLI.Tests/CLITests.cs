@@ -91,6 +91,11 @@ public class CLITests
             throw new InvalidOperationException("Environment config store should not be called for help flow.");
         }
 
+        public bool Delete(string name)
+        {
+            throw new InvalidOperationException("Environment config store should not be called for help flow.");
+        }
+
         public string? GetCurrent() => null;
 
         public void SetCurrent(string name)

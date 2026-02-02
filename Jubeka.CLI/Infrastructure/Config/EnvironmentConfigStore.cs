@@ -54,6 +54,29 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         File.WriteAllText(configPath, json);
     }
 
+    public bool Delete(string name)
+    {
+        string envDirectory = GetGlobalEnvDirectory(name);
+        if (!Directory.Exists(envDirectory))
+        {
+            return false;
+        }
+
+        Directory.Delete(envDirectory, true);
+
+        string? current = GetCurrent();
+        if (string.Equals(current, name, StringComparison.OrdinalIgnoreCase))
+        {
+            string currentPath = GetGlobalCurrentPath();
+            if (File.Exists(currentPath))
+            {
+                File.Delete(currentPath);
+            }
+        }
+
+        return true;
+    }
+
     public string? GetCurrent()
     {
         string globalPath = GetGlobalCurrentPath();

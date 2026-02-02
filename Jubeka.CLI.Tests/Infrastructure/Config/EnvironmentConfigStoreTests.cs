@@ -70,4 +70,42 @@ public class EnvironmentConfigStoreTests
             if (Directory.Exists(tempHome)) Directory.Delete(tempHome, true);
         }
     }
+
+    [Fact]
+    public void Delete_RemovesEnvAndClearsCurrent()
+    {
+        string tempHome = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempHome);
+        string? originalHome = Environment.GetEnvironmentVariable("HOME");
+
+        try
+        {
+            Environment.SetEnvironmentVariable("HOME", tempHome);
+
+            string varsPath = Path.Combine(tempHome, "vars.yml");
+            File.WriteAllText(varsPath, "variables:\n");
+
+            EnvironmentConfigStore store = new();
+            EnvironmentConfig config = new(
+                Name: "dev",
+                VarsPath: varsPath,
+                DefaultOpenApiSource: null,
+                Requests: []);
+
+            store.Save(config);
+            store.SetCurrent("dev");
+
+            bool deleted = store.Delete("dev");
+
+            Assert.True(deleted);
+            Assert.Null(store.Get("dev"));
+            Assert.Null(store.GetCurrent());
+            Assert.False(Directory.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev")));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("HOME", originalHome);
+            if (Directory.Exists(tempHome)) Directory.Delete(tempHome, true);
+        }
+    }
 }

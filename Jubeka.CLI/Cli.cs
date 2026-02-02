@@ -47,6 +47,7 @@ public sealed class Cli(
                 CliCommand.EnvUpdate => RunEnvUpdate((EnvConfigOptions)parseResult.Options),
                 CliCommand.EnvEdit => RunEnvEdit((EnvEditOptions)parseResult.Options),
                 CliCommand.EnvSet => RunEnvSet((EnvSetOptions)parseResult.Options),
+                CliCommand.EnvDelete => RunEnvDelete((EnvDeleteOptions)parseResult.Options),
                 _ => helpPrinter.Print("Unknown command.")
             };
         }
@@ -157,6 +158,25 @@ public sealed class Cli(
 
         environmentConfigStore.SetCurrent(options.Name);
         Console.WriteLine($"Current environment set to '{options.Name}'.");
+        return 0;
+    }
+
+    private int RunEnvDelete(EnvDeleteOptions options)
+    {
+        string? envName = ResolveCurrentEnv(options.Name);
+        if (string.IsNullOrWhiteSpace(envName))
+        {
+            Console.Error.WriteLine("No environment selected. Use --name or set a current environment.");
+            return 1;
+        }
+
+        if (!environmentConfigStore.Delete(envName))
+        {
+            Console.Error.WriteLine($"Environment config not found: {envName}");
+            return 1;
+        }
+
+        Console.WriteLine($"Environment '{envName}' deleted.");
         return 0;
     }
 
