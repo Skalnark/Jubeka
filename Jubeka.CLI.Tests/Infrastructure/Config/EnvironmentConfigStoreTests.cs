@@ -220,6 +220,7 @@ paths: {}
         }
     }
 
+
     private sealed class TestOpenApiServer : IAsyncDisposable
     {
         private readonly HttpListener _listener;
