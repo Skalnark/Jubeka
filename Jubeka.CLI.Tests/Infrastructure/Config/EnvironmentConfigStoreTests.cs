@@ -85,6 +85,20 @@ paths:
             Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "requests", "Ping.yml")));
             Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "requests", "specPing.yml")));
 
+            string openApiContent = File.ReadAllText(Path.Combine(tempHome, ".config", "jubeka", "dev", "openapi.json"));
+            Assert.Contains("openapi: 3.0.0", openApiContent);
+            Assert.Contains("specPing", openApiContent);
+
+            List<RequestFileDto> requestFiles = LoadRequestFiles(Path.Combine(tempHome, ".config", "jubeka", "dev", "requests"));
+            RequestFileDto specFile = Assert.Single(requestFiles, r => r.Name == "specPing");
+            Assert.Equal("GET", specFile.Method);
+            Assert.Contains("{{baseUrl}}", specFile.Url);
+            Assert.Contains("/ping/", specFile.Url);
+            Assert.Contains("{{id}}", specFile.Url);
+
+            RequestFileDto statusFile = Assert.Single(requestFiles, r => r.Name == "/status");
+            Assert.Equal("GET", statusFile.Method);
+
             RequestDefinition specRequest = Assert.Single(loaded.Requests, r => r.Name == "specPing");
             Assert.Contains("{{baseUrl}}", specRequest.Url);
             Assert.Contains("{{id}}", specRequest.Url);
@@ -137,6 +151,19 @@ paths:
             Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "openapi.json")));
             Assert.Contains(loaded!.Requests, r => r.Name == "listPets");
             Assert.Contains(loaded.Requests, r => r.Name == "createPet");
+
+            string openApiContent = File.ReadAllText(Path.Combine(tempHome, ".config", "jubeka", "dev", "openapi.json"));
+            Assert.Contains("\"openapi\":\"3.0.1\"", openApiContent);
+            Assert.Contains("listPets", openApiContent);
+
+            List<RequestFileDto> requestFiles = LoadRequestFiles(Path.Combine(tempHome, ".config", "jubeka", "dev", "requests"));
+            RequestFileDto listPets = Assert.Single(requestFiles, r => r.Name == "listPets");
+            Assert.Equal("GET", listPets.Method);
+            Assert.Contains("{{baseUrl}}", listPets.Url);
+            Assert.Contains("/pets/", listPets.Url);
+            Assert.Contains("{{petId}}", listPets.Url);
+            RequestFileDto createPets = Assert.Single(requestFiles, r => r.Name == "createPet");
+            Assert.Equal("POST", createPets.Method);
 
             Dictionary<string, string> vars = LoadVars(Path.Combine(tempHome, ".config", "jubeka", "dev", "vars.yml"));
             Assert.True(vars.ContainsKey("baseUrl"));
@@ -249,9 +276,35 @@ paths:
         return env?.Variables ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     }
 
+    private static List<RequestFileDto> LoadRequestFiles(string requestsDirectory)
+    {
+        if (!Directory.Exists(requestsDirectory))
+        {
+            return [];
+        }
+
+        IDeserializer deserializer = new DeserializerBuilder()
+            .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
+            .Build();
+
+        return Directory.GetFiles(requestsDirectory, "*.yml")
+            .Select(File.ReadAllText)
+            .Select(deserializer.Deserialize<RequestFileDto>)
+            .Where(dto => dto != null)
+            .ToList()!;
+    }
+
     private sealed class EnvironmentYaml
     {
         public Dictionary<string, string>? Variables { get; init; }
+    }
+
+    private sealed class RequestFileDto
+    {
+        public string Name { get; init; } = string.Empty;
+        public string Method { get; init; } = string.Empty;
+        public string Url { get; init; } = string.Empty;
     }
 
     [Fact]
