@@ -246,6 +246,11 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         List<RequestDefinition> requests = [];
         HashSet<string> usedNames = new(StringComparer.OrdinalIgnoreCase);
 
+        if (document.Paths == null)
+        {
+            return requests;
+        }
+
         foreach ((string path, OpenApiPathItem item) in document.Paths)
         {
             if (item == null)

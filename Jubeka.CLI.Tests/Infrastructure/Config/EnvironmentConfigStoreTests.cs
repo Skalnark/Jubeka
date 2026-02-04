@@ -177,6 +177,49 @@ paths:
         }
     }
 
+    [Fact]
+    public void Save_WithSpecWithoutPaths_DoesNotThrow()
+    {
+        string tempHome = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempHome);
+        string? originalHome = Environment.GetEnvironmentVariable("HOME");
+
+        try
+        {
+            Environment.SetEnvironmentVariable("HOME", tempHome);
+
+            string varsPath = Path.Combine(tempHome, "vars.yml");
+            File.WriteAllText(varsPath, "variables:\n");
+
+                        string rawSpec = """
+openapi: 3.0.0
+info:
+    title: No Paths
+    version: "1.0"
+paths: {}
+""";
+
+            EnvironmentConfigStore store = new();
+            EnvironmentConfig config = new(
+                Name: "dev",
+                VarsPath: varsPath,
+                DefaultOpenApiSource: new OpenApiSource(OpenApiSourceKind.Raw, rawSpec),
+                Requests: []);
+
+            store.Save(config);
+            EnvironmentConfig? loaded = store.Get("dev");
+
+            Assert.NotNull(loaded);
+            Assert.Empty(loaded!.Requests);
+            Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "openapi.json")));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("HOME", originalHome);
+            if (Directory.Exists(tempHome)) Directory.Delete(tempHome, true);
+        }
+    }
+
     private sealed class TestOpenApiServer : IAsyncDisposable
     {
         private readonly HttpListener _listener;
