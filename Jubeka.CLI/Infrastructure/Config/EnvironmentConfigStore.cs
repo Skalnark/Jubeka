@@ -3,9 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Threading;
 using Jubeka.CLI.Application;
 using Jubeka.CLI.Domain;
 using Jubeka.Core.Domain;
+using Jubeka.Core.Infrastructure.OpenApi;
+using Microsoft.OpenApi.Models;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -40,7 +45,10 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
         string varsPath = WriteVarsFile(envDirectory, config.VarsPath);
         OpenApiSource? openApiSource = WriteOpenApiSource(envDirectory, config.DefaultOpenApiSource);
-        List<string> requestFiles = WriteRequestFiles(envDirectory, config.Requests);
+        OpenApiDocument? openApiDocument = LoadOpenApiDocument(openApiSource);
+        UpdateVarsFileWithOpenApi(varsPath, openApiDocument);
+        List<RequestDefinition> mergedRequests = MergeRequestsWithOpenApi(config.Requests, openApiDocument);
+        List<string> requestFiles = WriteRequestFiles(envDirectory, mergedRequests);
 
         EnvironmentConfigPersisted persisted = new(
             Name: config.Name,
@@ -149,33 +157,16 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         }
 
         string path = Path.Combine(envDirectory, OpenApiFileName);
-        switch (source.Kind)
+        string content = source.Kind switch
         {
-            case OpenApiSourceKind.Url:
-                File.WriteAllText(path, source.Value ?? string.Empty);
-                return new OpenApiSource(OpenApiSourceKind.Url, source.Value ?? string.Empty);
-            case OpenApiSourceKind.Raw:
-                File.WriteAllText(path, source.Value ?? string.Empty);
-                return new OpenApiSource(OpenApiSourceKind.Raw, source.Value ?? string.Empty);
-            case OpenApiSourceKind.File:
-                if (!string.IsNullOrWhiteSpace(source.Value) && File.Exists(source.Value))
-                {
-                    string sourceFullPath = Path.GetFullPath(source.Value);
-                    string targetFullPath = Path.GetFullPath(path);
-                    if (!string.Equals(sourceFullPath, targetFullPath, StringComparison.OrdinalIgnoreCase))
-                    {
-                        File.Copy(source.Value, path, true);
-                    }
-                }
-                else
-                {
-                    File.WriteAllText(path, string.Empty);
-                }
+            OpenApiSourceKind.Url => DownloadOpenApiSource(source.Value ?? string.Empty),
+            OpenApiSourceKind.Raw => source.Value ?? string.Empty,
+            OpenApiSourceKind.File => ReadOpenApiFile(source.Value),
+            _ => source.Value ?? string.Empty
+        };
 
-                return new OpenApiSource(OpenApiSourceKind.File, path);
-            default:
-                return source;
-        }
+        File.WriteAllText(path, content ?? string.Empty);
+        return new OpenApiSource(OpenApiSourceKind.File, path);
     }
 
     private static OpenApiSource? ReadOpenApiSource(string envDirectory, EnvironmentConfigPersisted persisted)
@@ -199,6 +190,338 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
             OpenApiSourceKind.File => new OpenApiSource(OpenApiSourceKind.File, path),
             _ => null
         };
+    }
+
+    private static List<RequestDefinition> MergeRequestsWithOpenApi(IReadOnlyList<RequestDefinition> requests, OpenApiDocument? openApiDocument)
+    {
+        List<RequestDefinition> merged = requests?.ToList() ?? [];
+
+        if (openApiDocument == null)
+        {
+            return merged;
+        }
+
+        List<RequestDefinition> specRequests = BuildRequestsFromOpenApi(openApiDocument);
+        if (specRequests.Count == 0)
+        {
+            return merged;
+        }
+
+        HashSet<string> existingNames = new(merged.Select(r => r.Name), StringComparer.OrdinalIgnoreCase);
+        foreach (RequestDefinition request in specRequests)
+        {
+            if (existingNames.Contains(request.Name))
+            {
+                continue;
+            }
+
+            merged.Add(request);
+            existingNames.Add(request.Name);
+        }
+
+        return merged;
+    }
+
+    private static OpenApiDocument? LoadOpenApiDocument(OpenApiSource? source)
+    {
+        if (source == null || source.Kind != OpenApiSourceKind.File)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(source.Value) || !File.Exists(source.Value))
+        {
+            return null;
+        }
+
+        OpenApiSpecLoader loader = new();
+        return loader.LoadAsync(new OpenApiSource(OpenApiSourceKind.File, source.Value), CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+    }
+
+    private static List<RequestDefinition> BuildRequestsFromOpenApi(OpenApiDocument document)
+    {
+        string baseUrlTemplate = document.Servers?.Count > 0 ? "{{baseUrl}}" : string.Empty;
+        List<RequestDefinition> requests = [];
+        HashSet<string> usedNames = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach ((string path, OpenApiPathItem item) in document.Paths)
+        {
+            if (item == null)
+            {
+                continue;
+            }
+
+            foreach ((OperationType method, OpenApiOperation operation) in item.Operations)
+            {
+                if (operation == null)
+                {
+                    continue;
+                }
+
+                List<OpenApiParameter> parameters = [];
+                if (item.Parameters != null)
+                {
+                    parameters.AddRange(item.Parameters);
+                }
+                if (operation.Parameters != null)
+                {
+                    parameters.AddRange(operation.Parameters);
+                }
+
+                List<QueryParamDefinition> queryParams = parameters
+                    .Where(p => p.In == ParameterLocation.Query)
+                    .Select(p => new QueryParamDefinition(p.Name, $"{{{{{p.Name}}}}}"))
+                    .ToList();
+
+                List<string> headers = parameters
+                    .Where(p => p.In == ParameterLocation.Header)
+                    .Select(p => $"{p.Name}: {{{{{p.Name}}}}}")
+                    .ToList();
+
+                string baseName = string.IsNullOrWhiteSpace(operation.OperationId)
+                    ? path
+                    : operation.OperationId;
+                string name = EnsureUniqueRequestName(baseName, usedNames);
+
+                string url = CombineUrl(baseUrlTemplate, ConvertOpenApiTemplateToVars(path));
+                RequestDefinition request = new(
+                    name,
+                    method.ToString().ToUpperInvariant(),
+                    url,
+                    null,
+                    queryParams,
+                    headers,
+                    new AuthConfig(AuthMethod.Inherit));
+
+                requests.Add(request);
+            }
+        }
+
+        return requests;
+    }
+
+    private static string EnsureUniqueRequestName(string baseName, HashSet<string> usedNames)
+    {
+        string name = string.IsNullOrWhiteSpace(baseName) ? "request" : baseName;
+        if (!usedNames.Contains(name))
+        {
+            usedNames.Add(name);
+            return name;
+        }
+
+        int counter = 2;
+        string candidate = name;
+        while (usedNames.Contains(candidate))
+        {
+            candidate = $"{name}-{counter}";
+            counter++;
+        }
+
+        usedNames.Add(candidate);
+        return candidate;
+    }
+
+    private static void UpdateVarsFileWithOpenApi(string varsPath, OpenApiDocument? document)
+    {
+        if (document == null)
+        {
+            return;
+        }
+
+        Dictionary<string, string> vars = LoadVariables(varsPath);
+        Dictionary<string, string> specVars = BuildOpenApiVariables(document);
+
+        foreach ((string key, string value) in specVars)
+        {
+            if (!vars.TryGetValue(key, out string? existing) || string.IsNullOrWhiteSpace(existing))
+            {
+                vars[key] = value;
+            }
+        }
+
+        EnvironmentYaml yaml = new() { Variables = vars };
+        string output = YamlSerializer.Serialize(yaml);
+        File.WriteAllText(varsPath, output);
+    }
+
+    private static Dictionary<string, string> BuildOpenApiVariables(OpenApiDocument document)
+    {
+        Dictionary<string, string> vars = new(StringComparer.OrdinalIgnoreCase);
+
+        OpenApiServer? server = document.Servers?.FirstOrDefault();
+        if (server != null && !string.IsNullOrWhiteSpace(server.Url))
+        {
+            vars["baseUrl"] = ConvertOpenApiTemplateToVars(server.Url);
+
+            if (server.Variables != null)
+            {
+                foreach ((string key, OpenApiServerVariable variable) in server.Variables)
+                {
+                    if (string.IsNullOrWhiteSpace(key))
+                    {
+                        continue;
+                    }
+
+                    vars[key] = variable?.Default ?? string.Empty;
+                }
+            }
+
+            foreach (string key in ExtractTemplateVariables(server.Url))
+            {
+                if (!vars.ContainsKey(key))
+                {
+                    vars[key] = string.Empty;
+                }
+            }
+        }
+
+        foreach ((string path, OpenApiPathItem item) in document.Paths)
+        {
+            if (item == null)
+            {
+                continue;
+            }
+
+            foreach (string key in ExtractTemplateVariables(path))
+            {
+                if (!vars.ContainsKey(key))
+                {
+                    vars[key] = string.Empty;
+                }
+            }
+
+            foreach ((OperationType _, OpenApiOperation operation) in item.Operations)
+            {
+                List<OpenApiParameter> parameters = [];
+                if (item.Parameters != null)
+                {
+                    parameters.AddRange(item.Parameters);
+                }
+                if (operation.Parameters != null)
+                {
+                    parameters.AddRange(operation.Parameters);
+                }
+
+                foreach (OpenApiParameter parameter in parameters)
+                {
+                    if (string.IsNullOrWhiteSpace(parameter.Name))
+                    {
+                        continue;
+                    }
+
+                    if (vars.ContainsKey(parameter.Name))
+                    {
+                        continue;
+                    }
+
+                    string? defaultValue = parameter.Schema?.Default?.ToString();
+                    string? exampleValue = parameter.Example?.ToString();
+                    vars[parameter.Name] = defaultValue ?? exampleValue ?? string.Empty;
+                }
+            }
+        }
+
+        return vars;
+    }
+
+    private static Dictionary<string, string> LoadVariables(string varsPath)
+    {
+        if (!File.Exists(varsPath))
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        string yaml = File.ReadAllText(varsPath);
+        EnvironmentYaml? existing = YamlDeserializer.Deserialize<EnvironmentYaml>(yaml);
+        Dictionary<string, string> vars = new(StringComparer.OrdinalIgnoreCase);
+
+        if (existing?.Variables != null)
+        {
+            foreach ((string key, string value) in existing.Variables)
+            {
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    vars[key] = value;
+                }
+            }
+        }
+
+        return vars;
+    }
+
+    private static string ConvertOpenApiTemplateToVars(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return input;
+        }
+
+        return Regex.Replace(input, "\\{([^}]+)\\}", "{{$1}}");
+    }
+
+    private static IEnumerable<string> ExtractTemplateVariables(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return [];
+        }
+
+        return Regex.Matches(input, "\\{([^}]+)\\}")
+            .Select(match => match.Groups[1].Value)
+            .Where(value => !string.IsNullOrWhiteSpace(value));
+    }
+
+    private static string CombineUrl(string baseUrl, string path)
+    {
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            return path;
+        }
+
+        bool baseEndsWithSlash = baseUrl.EndsWith("/", StringComparison.Ordinal);
+        bool pathStartsWithSlash = path.StartsWith("/", StringComparison.Ordinal);
+
+        if (baseEndsWithSlash && pathStartsWithSlash)
+        {
+            return baseUrl.TrimEnd('/') + path;
+        }
+
+        if (!baseEndsWithSlash && !pathStartsWithSlash)
+        {
+            return baseUrl + "/" + path;
+        }
+
+        return baseUrl + path;
+    }
+
+    private static string DownloadOpenApiSource(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using HttpClient client = new();
+            return client.GetStringAsync(url).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            throw new OpenApiSpecificationException($"Failed to download OpenAPI spec: {ex.Message}");
+        }
+    }
+
+    private static string ReadOpenApiFile(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return string.Empty;
+        }
+
+        return File.ReadAllText(path);
     }
 
     private static List<string> WriteRequestFiles(string envDirectory, IReadOnlyList<RequestDefinition> requests)
@@ -393,6 +716,11 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
     private const string ConfigFileName = "config.json";
     private const string VarsFileName = "vars.yml";
-    private const string OpenApiFileName = "openapi.source";
+    private const string OpenApiFileName = "openapi.json";
     private const string RequestsDirectory = "requests";
+
+    private sealed class EnvironmentYaml
+    {
+        public Dictionary<string, string>? Variables { get; init; }
+    }
 }
