@@ -553,7 +553,7 @@ public sealed partial class EnvironmentConfigStore : IEnvironmentConfigStore
                 Timeout = OpenApiDownloadTimeout
             };
 
-            HttpResponseMessage response = client.GetAsync(url, cts.Token)
+            using HttpResponseMessage response = client.GetAsync(url, cts.Token)
                 .ConfigureAwait(false)
                 .GetAwaiter()
                 .GetResult();
