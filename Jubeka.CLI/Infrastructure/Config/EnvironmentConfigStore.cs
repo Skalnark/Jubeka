@@ -368,23 +368,15 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
             if (server.Variables != null)
             {
-                foreach ((string key, OpenApiServerVariable variable) in server.Variables)
+                foreach ((string key, OpenApiServerVariable variable) in server.Variables.Where(kv => !string.IsNullOrWhiteSpace(kv.Key)))
                 {
-                    if (string.IsNullOrWhiteSpace(key))
-                    {
-                        continue;
-                    }
-
                     vars[key] = variable?.Default ?? string.Empty;
                 }
             }
 
-            foreach (string key in ExtractTemplateVariables(server.Url))
+            foreach (string key in ExtractTemplateVariables(server.Url).Where(k => !vars.ContainsKey(k)))
             {
-                if (!vars.ContainsKey(key))
-                {
-                    vars[key] = string.Empty;
-                }
+                vars[key] = string.Empty;
             }
         }
 
@@ -395,12 +387,9 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
                 continue;
             }
 
-            foreach (string key in ExtractTemplateVariables(path))
+            foreach (string key in ExtractTemplateVariables(path).Where(k => !vars.ContainsKey(k)))
             {
-                if (!vars.ContainsKey(key))
-                {
-                    vars[key] = string.Empty;
-                }
+                vars[key] = string.Empty;
             }
 
             foreach ((OperationType _, OpenApiOperation operation) in item.Operations)
@@ -415,18 +404,8 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
                     parameters.AddRange(operation.Parameters);
                 }
 
-                foreach (OpenApiParameter parameter in parameters)
+                foreach (OpenApiParameter parameter in parameters.Where(p => !string.IsNullOrWhiteSpace(p.Name) && !vars.ContainsKey(p.Name)))
                 {
-                    if (string.IsNullOrWhiteSpace(parameter.Name))
-                    {
-                        continue;
-                    }
-
-                    if (vars.ContainsKey(parameter.Name))
-                    {
-                        continue;
-                    }
-
                     string? defaultValue = parameter.Schema?.Default?.ToString();
                     string? exampleValue = parameter.Example?.ToString();
                     vars[parameter.Name] = defaultValue ?? exampleValue ?? string.Empty;
