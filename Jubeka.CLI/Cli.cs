@@ -511,11 +511,11 @@ public sealed class Cli(
         return results;
     }
 
-    private static double ResolveTimeoutSeconds(double requestedSeconds, IReadOnlyDictionary<string, string> vars)
+    private static double ResolveTimeoutSeconds(double? requestedSeconds, IReadOnlyDictionary<string, string> vars)
     {
-        if (requestedSeconds != DefaultTimeoutSeconds)
+        if (requestedSeconds.HasValue)
         {
-            return requestedSeconds;
+            return requestedSeconds.Value;
         }
 
         if (vars.TryGetValue(OpenApiTimeoutSecondsKey, out string? raw)
@@ -525,7 +525,7 @@ public sealed class Cli(
             return parsed;
         }
 
-        return requestedSeconds;
+        return DefaultTimeoutSeconds;
     }
 
     private IReadOnlyDictionary<string, string> LoadEnvVarsSafe(string? path)

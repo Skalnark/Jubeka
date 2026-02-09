@@ -60,7 +60,7 @@ public sealed class ArgumentParser : IArgumentParser
         string? url = null;
         string? body = null;
         string? envPath = null;
-        double timeoutSeconds = 100;
+        double? timeoutSeconds = null;
         bool pretty = false;
         List<string> rawQueries = [];
         List<string> rawHeaders = [];
@@ -119,10 +119,11 @@ public sealed class ArgumentParser : IArgumentParser
                     {
                         return ParseResult.Help($"Missing value for {arg}.");
                     }
-                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out timeoutSeconds) || timeoutSeconds <= 0)
+                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedTimeout) || parsedTimeout <= 0)
                     {
                         return ParseResult.Help("Invalid timeout. Use a positive number of seconds.");
                     }
+                    timeoutSeconds = parsedTimeout;
                     break;
                 case "--pretty":
                     pretty = true;
@@ -153,7 +154,7 @@ public sealed class ArgumentParser : IArgumentParser
         OpenApiSource? source = null;
         string? envPath = null;
         string? envName = null;
-        double timeoutSeconds = 100;
+        double? timeoutSeconds = null;
         bool pretty = false;
 
         for (int i = 0; i < filteredArgs.Count; i++)
@@ -210,10 +211,11 @@ public sealed class ArgumentParser : IArgumentParser
                     {
                         return ParseResult.Help($"Missing value for {arg}.");
                     }
-                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out timeoutSeconds) || timeoutSeconds <= 0)
+                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedTimeout) || parsedTimeout <= 0)
                     {
                         return ParseResult.Help("Invalid timeout. Use a positive number of seconds.");
                     }
+                    timeoutSeconds = parsedTimeout;
                     break;
                 case "--pretty":
                     pretty = true;
@@ -269,7 +271,7 @@ public sealed class ArgumentParser : IArgumentParser
         string? requestUrl = null;
         string? requestBody = null;
         bool inline = false;
-        double timeoutSeconds = 100;
+        double? timeoutSeconds = null;
         List<string> requestQueries = [];
         List<string> requestHeaders = [];
 
@@ -367,10 +369,11 @@ public sealed class ArgumentParser : IArgumentParser
                     {
                         return ParseResult.Help($"Missing value for {arg}.");
                     }
-                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out timeoutSeconds) || timeoutSeconds <= 0)
+                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedTimeout) || parsedTimeout <= 0)
                     {
                         return ParseResult.Help("Invalid timeout. Use a positive number of seconds.");
                     }
+                    timeoutSeconds = parsedTimeout;
                     break;
                 default:
                     return ParseResult.Help($"Unknown argument '{arg}'.");
