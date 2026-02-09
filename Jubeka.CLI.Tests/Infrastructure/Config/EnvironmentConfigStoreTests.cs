@@ -105,11 +105,11 @@ paths:
             Assert.DoesNotContain("GET", statusRequest.Name, StringComparison.OrdinalIgnoreCase);
 
             Dictionary<string, string> vars = LoadVars(Path.Combine(tempHome, ".config", "jubeka", "dev", "vars.yml"));
-            Assert.True(vars.ContainsKey("baseUrl"));
+            Assert.True(vars.TryGetValue("baseUrl", out var baseUrl));
             Assert.True(vars.ContainsKey("version"));
             Assert.True(vars.ContainsKey("id"));
             Assert.True(vars.ContainsKey("filter"));
-            Assert.Equal("https://example.com/{{version}}", vars["baseUrl"]);
+            Assert.Equal("https://example.com/{{version}}", baseUrl);
             Assert.Equal("30", vars["openApiTimeoutSeconds"]);
         }
         finally

@@ -378,6 +378,11 @@ public sealed partial class EnvironmentConfigStore : IEnvironmentConfigStore
             }
         }
 
+        if (document.Paths == null || document.Paths.Count == 0)
+        {
+            return vars;
+        }
+
         foreach ((string path, OpenApiPathItem item) in document.Paths)
         {
             if (item == null)
@@ -402,8 +407,13 @@ public sealed partial class EnvironmentConfigStore : IEnvironmentConfigStore
                     parameters.AddRange(operation.Parameters);
                 }
 
-                foreach (OpenApiParameter parameter in parameters.Where(p => !string.IsNullOrWhiteSpace(p.Name) && !vars.ContainsKey(p.Name)))
+                foreach (OpenApiParameter parameter in parameters.Where(p => !string.IsNullOrWhiteSpace(p.Name)))
                 {
+                    if (vars.TryGetValue(parameter.Name, out string? existing) && !string.IsNullOrWhiteSpace(existing))
+                    {
+                        continue;
+                    }
+
                     string? defaultValue = parameter.Schema?.Default?.ToString();
                     string? exampleValue = parameter.Example?.ToString();
                     vars[parameter.Name] = defaultValue ?? exampleValue ?? string.Empty;
