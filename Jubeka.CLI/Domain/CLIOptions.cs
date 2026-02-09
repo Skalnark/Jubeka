@@ -7,7 +7,7 @@ public sealed record CLIOptions(
     string Url,
     string? Body,
     string? EnvPath,
-    double TimeoutSeconds,
+    double? TimeoutSeconds,
     bool Pretty,
     IReadOnlyList<string> QueryParams,
     IReadOnlyList<string> Headers

@@ -52,7 +52,7 @@ namespace Jubeka.Core.Tests.Application.Default
         [Fact]
         public void SubstituteOrThrow_WhenMissing_Throws()
         {
-            Dictionary<string, string> vars = new();
+            Dictionary<string, string> vars = [];
             Assert.Throws<MissingEnvironmentVariableException>(() => VariableSubstitutor.SubstituteOrThrow("{{missing}}", vars));
         }
     }

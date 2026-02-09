@@ -60,7 +60,7 @@ public sealed class ArgumentParser : IArgumentParser
         string? url = null;
         string? body = null;
         string? envPath = null;
-        double timeoutSeconds = 100;
+        double? timeoutSeconds = null;
         bool pretty = false;
         List<string> rawQueries = [];
         List<string> rawHeaders = [];
@@ -119,10 +119,11 @@ public sealed class ArgumentParser : IArgumentParser
                     {
                         return ParseResult.Help($"Missing value for {arg}.");
                     }
-                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out timeoutSeconds) || timeoutSeconds <= 0)
+                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedTimeout) || parsedTimeout <= 0)
                     {
                         return ParseResult.Help("Invalid timeout. Use a positive number of seconds.");
                     }
+                    timeoutSeconds = parsedTimeout;
                     break;
                 case "--pretty":
                     pretty = true;
@@ -153,7 +154,7 @@ public sealed class ArgumentParser : IArgumentParser
         OpenApiSource? source = null;
         string? envPath = null;
         string? envName = null;
-        double timeoutSeconds = 100;
+        double? timeoutSeconds = null;
         bool pretty = false;
 
         for (int i = 0; i < filteredArgs.Count; i++)
@@ -210,10 +211,11 @@ public sealed class ArgumentParser : IArgumentParser
                     {
                         return ParseResult.Help($"Missing value for {arg}.");
                     }
-                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out timeoutSeconds) || timeoutSeconds <= 0)
+                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedTimeout) || parsedTimeout <= 0)
                     {
                         return ParseResult.Help("Invalid timeout. Use a positive number of seconds.");
                     }
+                    timeoutSeconds = parsedTimeout;
                     break;
                 case "--pretty":
                     pretty = true;
@@ -236,7 +238,7 @@ public sealed class ArgumentParser : IArgumentParser
     {
         if (args.Count == 0)
         {
-            return ParseResult.Help("env command requires create, update, or edit.");
+            return ParseResult.Help("env command requires create, update, edit, set, or delete.");
         }
 
         string action = args[0];
@@ -245,6 +247,7 @@ public sealed class ArgumentParser : IArgumentParser
             : action.Equals("update", StringComparison.OrdinalIgnoreCase) ? CliCommand.EnvUpdate
             : action.Equals("edit", StringComparison.OrdinalIgnoreCase) ? CliCommand.EnvEdit
             : action.Equals("set", StringComparison.OrdinalIgnoreCase) ? CliCommand.EnvSet
+            : action.Equals("delete", StringComparison.OrdinalIgnoreCase) ? CliCommand.EnvDelete
             : action.Equals("request", StringComparison.OrdinalIgnoreCase) && args.Count > 1 && args[1].Equals("add", StringComparison.OrdinalIgnoreCase)
                 ? CliCommand.RequestAdd
                 : action.Equals("request", StringComparison.OrdinalIgnoreCase) && args.Count > 1 && args[1].Equals("list", StringComparison.OrdinalIgnoreCase)
@@ -257,7 +260,7 @@ public sealed class ArgumentParser : IArgumentParser
 
         if (command == 0)
         {
-            return ParseResult.Help("env command requires create, update, edit, set, or request add/list/edit/exec.");
+            return ParseResult.Help("env command requires create, update, edit, set, delete, or request add/list/edit/exec.");
         }
 
         string? name = null;
@@ -268,7 +271,7 @@ public sealed class ArgumentParser : IArgumentParser
         string? requestUrl = null;
         string? requestBody = null;
         bool inline = false;
-        double timeoutSeconds = 100;
+        double? timeoutSeconds = null;
         List<string> requestQueries = [];
         List<string> requestHeaders = [];
 
@@ -366,10 +369,11 @@ public sealed class ArgumentParser : IArgumentParser
                     {
                         return ParseResult.Help($"Missing value for {arg}.");
                     }
-                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out timeoutSeconds) || timeoutSeconds <= 0)
+                    if (!double.TryParse(timeoutValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedTimeout) || parsedTimeout <= 0)
                     {
                         return ParseResult.Help("Invalid timeout. Use a positive number of seconds.");
                     }
+                    timeoutSeconds = parsedTimeout;
                     break;
                 default:
                     return ParseResult.Help($"Unknown argument '{arg}'.");
@@ -385,6 +389,12 @@ public sealed class ArgumentParser : IArgumentParser
 
             EnvSetOptions setOptions = new(name);
             return ParseResult.Success(CliCommand.EnvSet, setOptions);
+        }
+
+        if (command == CliCommand.EnvDelete)
+        {
+            EnvDeleteOptions deleteOptions = new(name);
+            return ParseResult.Success(CliCommand.EnvDelete, deleteOptions);
         }
 
         if (command == CliCommand.RequestList)

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Jubeka.CLI.Domain;
-using Jubeka.Core.Domain;
 
 namespace Jubeka.CLI.Application;
 

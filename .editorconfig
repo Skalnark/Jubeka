@@ -1,0 +1,5 @@
+root = true
+
+[*.cs]
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_object_initializer = true:suggestion

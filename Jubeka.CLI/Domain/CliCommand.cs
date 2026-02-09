@@ -11,5 +11,6 @@ public enum CliCommand
     EnvCreate,
     EnvUpdate,
     EnvEdit,
-    EnvSet
+    EnvSet,
+    EnvDelete
 }

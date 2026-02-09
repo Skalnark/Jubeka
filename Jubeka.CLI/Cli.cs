@@ -47,6 +47,7 @@ public sealed class Cli(
                 CliCommand.EnvUpdate => RunEnvUpdate((EnvConfigOptions)parseResult.Options),
                 CliCommand.EnvEdit => RunEnvEdit((EnvEditOptions)parseResult.Options),
                 CliCommand.EnvSet => RunEnvSet((EnvSetOptions)parseResult.Options),
+                CliCommand.EnvDelete => RunEnvDelete((EnvDeleteOptions)parseResult.Options),
                 _ => helpPrinter.Print("Unknown command.")
             };
         }
@@ -75,6 +76,7 @@ public sealed class Cli(
     private async Task<int> RunRequestAsync(RequestCommandOptions options, CancellationToken cancellationToken)
     {
         IReadOnlyDictionary<string, string> vars = environmentVariablesLoader.Load(options.EnvPath);
+        double timeoutSeconds = ResolveTimeoutSeconds(options.TimeoutSeconds, vars);
         RequestOptions requestOptions = new(
             options.Method,
             options.Url,
@@ -85,7 +87,7 @@ public sealed class Cli(
         RequestData requestData = requestDataBuilder.Build(requestOptions, vars);
         ResponseData response = await HttpRequestExecutor.ExecuteAsync(
             requestData,
-            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            TimeSpan.FromSeconds(timeoutSeconds),
             cancellationToken).ConfigureAwait(false);
 
         responseWriter.Write(response, options.Pretty);
@@ -98,12 +100,13 @@ public sealed class Cli(
         IReadOnlyDictionary<string, string> vars = environmentVariablesLoader.Load(envPath);
         Microsoft.OpenApi.Models.OpenApiDocument document = await openApiSpecLoader.LoadAsync(source, cancellationToken).ConfigureAwait(false);
 
+        double timeoutSeconds = ResolveTimeoutSeconds(options.TimeoutSeconds, vars);
         RequestOptions openApiRequest = openApiRequestBuilder.Build(document, options.OperationId, vars);
         RequestData requestData = requestDataBuilder.Build(openApiRequest, vars);
 
         ResponseData response = await HttpRequestExecutor.ExecuteAsync(
             requestData,
-            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            TimeSpan.FromSeconds(timeoutSeconds),
             cancellationToken).ConfigureAwait(false);
 
         responseWriter.Write(response, options.Pretty);
@@ -157,6 +160,25 @@ public sealed class Cli(
 
         environmentConfigStore.SetCurrent(options.Name);
         Console.WriteLine($"Current environment set to '{options.Name}'.");
+        return 0;
+    }
+
+    private int RunEnvDelete(EnvDeleteOptions options)
+    {
+        string? envName = ResolveCurrentEnv(options.Name);
+        if (string.IsNullOrWhiteSpace(envName))
+        {
+            Console.Error.WriteLine("No environment selected. Use --name or set a current environment.");
+            return 1;
+        }
+
+        if (!environmentConfigStore.Delete(envName))
+        {
+            Console.Error.WriteLine($"Environment config not found: {envName}");
+            return 1;
+        }
+
+        Console.WriteLine($"Environment '{envName}' deleted.");
         return 0;
     }
 
@@ -346,7 +368,7 @@ public sealed class Cli(
             }
 
             RequestDefinition updatedRequest = ApplyInlineEdits(config.Requests[inlineIndex], options);
-            List<RequestDefinition> inlineRequests = config.Requests.ToList();
+            List<RequestDefinition> inlineRequests = [.. config.Requests];
             inlineRequests[inlineIndex] = updatedRequest;
             EnvironmentConfig inlineConfig = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, inlineRequests);
             environmentConfigStore.Save(inlineConfig);
@@ -363,7 +385,7 @@ public sealed class Cli(
         }
 
         RequestDefinition edited = requestWizard.EditRequest(config.Requests[index], vars);
-        List<RequestDefinition> updatedRequests = config.Requests.ToList();
+        List<RequestDefinition> updatedRequests = [.. config.Requests];
         updatedRequests[index] = edited;
 
         EnvironmentConfig updated = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, updatedRequests);
@@ -402,6 +424,7 @@ public sealed class Cli(
         }
 
         IReadOnlyDictionary<string, string> vars = LoadEnvVarsSafe(config.VarsPath);
+        double timeoutSeconds = ResolveTimeoutSeconds(options.TimeoutSeconds, vars);
         RequestDefinition request = config.Requests[index];
         RequestOptions requestOptions = new(
             request.Method,
@@ -413,7 +436,7 @@ public sealed class Cli(
         RequestData requestData = requestDataBuilder.Build(requestOptions, vars);
         ResponseData response = await HttpRequestExecutor.ExecuteAsync(
             requestData,
-            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            TimeSpan.FromSeconds(timeoutSeconds),
             cancellationToken).ConfigureAwait(false);
 
         responseWriter.Write(response, false);
@@ -488,6 +511,23 @@ public sealed class Cli(
         return results;
     }
 
+    private static double ResolveTimeoutSeconds(double? requestedSeconds, IReadOnlyDictionary<string, string> vars)
+    {
+        if (requestedSeconds.HasValue)
+        {
+            return requestedSeconds.Value;
+        }
+
+        if (vars.TryGetValue(OpenApiTimeoutSecondsKey, out string? raw)
+            && double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double parsed)
+            && parsed > 0)
+        {
+            return parsed;
+        }
+
+        return DefaultTimeoutSeconds;
+    }
+
     private IReadOnlyDictionary<string, string> LoadEnvVarsSafe(string? path)
     {
         try
@@ -503,4 +543,7 @@ public sealed class Cli(
             return new Dictionary<string, string>();
         }
     }
+
+    private const double DefaultTimeoutSeconds = 100;
+    private const string OpenApiTimeoutSecondsKey = "openApiTimeoutSeconds";
 }

@@ -1,7 +1,6 @@
 using Jubeka.CLI.Application;
 using Jubeka.CLI.Application.Default;
 using Jubeka.CLI.Domain;
-using Jubeka.Core.Domain;
 
 namespace Jubeka.CLI.Tests.Application.Default;
 

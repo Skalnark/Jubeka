@@ -58,7 +58,8 @@ public class ArgumentParserTests
         Assert.Equal("POST", options.Method);
         Assert.Equal("https://example.com", options.Url);
         Assert.True(options.Pretty);
-        Assert.Equal(2.5, options.TimeoutSeconds);
+        Assert.True(options.TimeoutSeconds.HasValue);
+        Assert.Equal(2.5, options.TimeoutSeconds.Value);
     }
 
     [Fact]
@@ -277,6 +278,22 @@ public class ArgumentParserTests
     }
 
     [Fact]
+    public void Parse_EnvDelete_ParsesOptions()
+    {
+        ArgumentParser parser = new();
+
+        ParseResult result = parser.Parse([
+            "env",
+            "delete",
+            "--name", "dev"
+        ]);
+
+        Assert.Equal(CliCommand.EnvDelete, result.Command);
+        EnvDeleteOptions options = Assert.IsType<EnvDeleteOptions>(result.Options);
+        Assert.Equal("dev", options.Name);
+    }
+
+    [Fact]
     public void Parse_RequestExec_ParsesOptions()
     {
         ArgumentParser parser = new();
@@ -293,7 +310,8 @@ public class ArgumentParserTests
         EnvRequestExecOptions options = Assert.IsType<EnvRequestExecOptions>(result.Options);
         Assert.Equal("dev", options.EnvName);
         Assert.Equal("Ping", options.RequestName);
-        Assert.Equal(12, options.TimeoutSeconds);
+        Assert.True(options.TimeoutSeconds.HasValue);
+        Assert.Equal(12, options.TimeoutSeconds.Value);
     }
 
     [Fact]

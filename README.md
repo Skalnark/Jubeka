@@ -94,6 +94,12 @@ Set the current environment (so you can omit `--name` in env commands):
 jubeka-cli env set --name dev
 ```
 
+Delete an environment configuration:
+
+```bash
+jubeka-cli env delete --name dev
+```
+
 If the wizard leaves the vars path empty, it defaults to `NAME.yml`. Default OpenAPI spec is optional.
 
 Use a named environment when invoking OpenAPI requests:

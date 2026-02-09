@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Jubeka.CLI.Domain;
-using Jubeka.Core.Domain;
 
 namespace Jubeka.CLI.Application.Default;
 
@@ -34,8 +33,8 @@ public sealed class RequestWizard(IPrompt prompt) : IRequestWizard
         string method = request.Method;
         string url = request.Url;
         string? body = request.Body;
-        List<QueryParamDefinition> queries = request.QueryParams.ToList();
-        List<string> headers = request.Headers.ToList();
+        List<QueryParamDefinition> queries = [.. request.QueryParams];
+        List<string> headers = [.. request.Headers];
         AuthConfig auth = request.Auth;
 
         while (true)
@@ -348,7 +347,7 @@ public sealed class RequestWizard(IPrompt prompt) : IRequestWizard
 
     private string? PromptSelectVariable(IReadOnlyDictionary<string, string> vars)
     {
-        List<string> keys = vars.Keys.OrderBy(k => k).ToList();
+        List<string> keys = [.. vars.Keys.OrderBy(k => k)];
         for (int i = 0; i < keys.Count; i++)
         {
             Console.WriteLine($"{i + 1}. {keys[i]}");

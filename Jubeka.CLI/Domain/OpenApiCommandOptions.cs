@@ -7,6 +7,6 @@ public sealed record OpenApiCommandOptions(
     OpenApiSource? Source,
     string? EnvPath,
     string? EnvName,
-    double TimeoutSeconds,
+    double? TimeoutSeconds,
     bool Pretty
 );
