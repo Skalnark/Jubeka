@@ -55,7 +55,7 @@ public sealed partial class EnvironmentConfigStore : IEnvironmentConfigStore
             Name: config.Name,
             VarsFile: Path.GetFileName(varsPath),
             OpenApiKind: openApiSource?.Kind,
-            OpenApiFile: openApiSource != null ? OpenApiFileName : null,
+            OpenApiFile: openApiSource != null ? Path.GetFileName(openApiSource.Value ?? string.Empty) : null,
             RequestFiles: requestFiles);
 
         string configPath = GetConfigPath(envDirectory);
@@ -157,7 +157,6 @@ public sealed partial class EnvironmentConfigStore : IEnvironmentConfigStore
             return null;
         }
 
-        string path = Path.Combine(envDirectory, OpenApiFileName);
         string content = source.Kind switch
         {
             OpenApiSourceKind.Url => DownloadOpenApiSource(source.Value ?? string.Empty),
@@ -165,6 +164,9 @@ public sealed partial class EnvironmentConfigStore : IEnvironmentConfigStore
             OpenApiSourceKind.File => ReadOpenApiFile(source.Value),
             _ => source.Value ?? string.Empty
         };
+
+        string fileName = GetOpenApiFileName(content, source);
+        string path = Path.Combine(envDirectory, fileName);
 
         File.WriteAllText(path, content ?? string.Empty);
         return new OpenApiSource(OpenApiSourceKind.File, path);
@@ -474,6 +476,45 @@ public sealed partial class EnvironmentConfigStore : IEnvironmentConfigStore
     [GeneratedRegex("\\{([^}]+)\\}")]
     private static partial Regex TemplateVarRegex();
 
+    private static string GetOpenApiFileName(string content, OpenApiSource source)
+    {
+        string? extension = null;
+        if (source.Kind == OpenApiSourceKind.File && !string.IsNullOrWhiteSpace(source.Value))
+        {
+            string ext = Path.GetExtension(source.Value);
+            if (IsOpenApiExtension(ext))
+            {
+                extension = ext;
+            }
+        }
+
+        extension ??= LooksLikeJson(content) ? ".json" : ".yaml";
+        return $"{OpenApiFileBaseName}{extension}";
+    }
+
+    private static bool IsOpenApiExtension(string? extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return false;
+        }
+
+        return extension.Equals(".json", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".yml", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikeJson(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return false;
+        }
+
+        string trimmed = content.TrimStart();
+        return trimmed.StartsWith("{", StringComparison.Ordinal) || trimmed.StartsWith("[", StringComparison.Ordinal);
+    }
+
     private static string CombineUrl(string baseUrl, string path)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
@@ -734,7 +775,7 @@ public sealed partial class EnvironmentConfigStore : IEnvironmentConfigStore
 
     private const string ConfigFileName = "config.json";
     private const string VarsFileName = "vars.yml";
-    private const string OpenApiFileName = "openapi.json";
+    private const string OpenApiFileBaseName = "openapi";
     private const string RequestsDirectory = "requests";
     private const int DefaultOpenApiTimeoutSeconds = 30;
     private static readonly TimeSpan OpenApiDownloadTimeout = TimeSpan.FromSeconds(DefaultOpenApiTimeoutSeconds);

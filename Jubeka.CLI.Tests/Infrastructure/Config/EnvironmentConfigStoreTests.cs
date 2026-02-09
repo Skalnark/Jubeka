@@ -78,11 +78,13 @@ paths:
             Assert.Equal(3, loaded.Requests.Count);
             Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "config.json")));
             Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "vars.yml")));
-            Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "openapi.json")));
+            string openApiPath = GetOpenApiFilePath(Path.Combine(tempHome, ".config", "jubeka", "dev"));
+            Assert.True(File.Exists(openApiPath));
             Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "requests", "Ping.yml")));
             Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "requests", "specPing.yml")));
 
-            string openApiContent = File.ReadAllText(Path.Combine(tempHome, ".config", "jubeka", "dev", "openapi.json"));
+            string openApiContent = File.ReadAllText(openApiPath);
+            Assert.True(HasMatchingOpenApiExtension(openApiPath, openApiContent));
             Assert.Contains("openapi: 3.0.0", openApiContent);
             Assert.Contains("specPing", openApiContent);
 
@@ -146,11 +148,13 @@ paths:
             EnvironmentConfig? loaded = store.Get("dev");
 
             Assert.NotNull(loaded);
-            Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "openapi.json")));
+            string openApiPath = GetOpenApiFilePath(Path.Combine(tempHome, ".config", "jubeka", "dev"));
+            Assert.True(File.Exists(openApiPath));
             Assert.Contains(loaded!.Requests, r => r.Name == "listPets");
             Assert.Contains(loaded.Requests, r => r.Name == "createPet");
 
-            string openApiContent = File.ReadAllText(Path.Combine(tempHome, ".config", "jubeka", "dev", "openapi.json"));
+            string openApiContent = File.ReadAllText(openApiPath);
+            Assert.True(HasMatchingOpenApiExtension(openApiPath, openApiContent));
             Assert.Contains("\"openapi\":\"3.0.1\"", openApiContent);
             Assert.Contains("listPets", openApiContent);
 
@@ -245,7 +249,10 @@ paths: {}
 
             Assert.NotNull(loaded);
             Assert.Empty(loaded!.Requests);
-            Assert.True(File.Exists(Path.Combine(tempHome, ".config", "jubeka", "dev", "openapi.json")));
+            string openApiPath = GetOpenApiFilePath(Path.Combine(tempHome, ".config", "jubeka", "dev"));
+            Assert.True(File.Exists(openApiPath));
+            string openApiContent = File.ReadAllText(openApiPath);
+            Assert.True(HasMatchingOpenApiExtension(openApiPath, openApiContent));
         }
         finally
         {
@@ -457,6 +464,49 @@ paths: {}
             .Select(deserializer.Deserialize<RequestFileDto>)
             .Where(dto => dto != null)
             .ToList()!;
+    }
+
+    private static string GetOpenApiFilePath(string envDirectory)
+    {
+        string[] candidates = [
+            Path.Combine(envDirectory, "openapi.json"),
+            Path.Combine(envDirectory, "openapi.yaml"),
+            Path.Combine(envDirectory, "openapi.yml")
+        ];
+
+        foreach (string candidate in candidates)
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return candidates[0];
+    }
+
+    private static bool HasMatchingOpenApiExtension(string path, string content)
+    {
+        string extension = Path.GetExtension(path);
+        bool looksLikeJson = LooksLikeJson(content);
+        if (looksLikeJson)
+        {
+            return extension.Equals(".json", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".yml", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikeJson(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return false;
+        }
+
+        string trimmed = content.TrimStart();
+        return trimmed.StartsWith("{", StringComparison.Ordinal) || trimmed.StartsWith("[", StringComparison.Ordinal);
     }
 
     private sealed class EnvironmentYaml
