@@ -575,9 +575,14 @@ public sealed partial class EnvironmentConfigStore : IEnvironmentConfigStore
 
     private static string ReadOpenApiFile(string? path)
     {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        if (string.IsNullOrWhiteSpace(path))
         {
-            return string.Empty;
+            throw new OpenApiSpecificationException("OpenAPI spec file path is required.");
+        }
+
+        if (!File.Exists(path))
+        {
+            throw new OpenApiSpecificationException($"OpenAPI spec file not found: {path}");
         }
 
         return File.ReadAllText(path);

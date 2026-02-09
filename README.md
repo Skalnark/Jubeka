@@ -97,8 +97,7 @@ jubeka-cli env set --name dev
 Delete an environment configuration:
 
 ```bash
-dotnet run --project Jubeka.CLI/Jubeka.CLI.csproj -- \
- env delete --name dev
+jubeka-cli env delete --name dev
 ```
 
 If the wizard leaves the vars path empty, it defaults to `NAME.yml`. Default OpenAPI spec is optional.
