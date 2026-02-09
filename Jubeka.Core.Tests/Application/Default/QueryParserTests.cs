@@ -13,7 +13,7 @@ public class QueryParserTests
     {
         List<string> raw = ["key1=value1", "key2=value2"];
         Dictionary<string, string> vars = [];
-        List<(string Key, string Value)> parsed = _parser.Parse(raw, vars).ToList();
+        List<(string Key, string Value)> parsed = [.. _parser.Parse(raw, vars)];
         Assert.Equal(2, parsed.Count);
         Assert.Equal(("key1", "value1"), parsed[0]);
         Assert.Equal(("key2", "value2"), parsed[1]);
@@ -24,7 +24,7 @@ public class QueryParserTests
     {
         List<string> raw = ["key1=", "key", "=value"];
         Dictionary<string, string> vars = [];
-        List<(string Key, string Value)> parsed = _parser.Parse(raw, vars).ToList();
+        List<(string Key, string Value)> parsed = [.. _parser.Parse(raw, vars)];
         Assert.Equal([], parsed);
     }
 }

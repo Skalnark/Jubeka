@@ -12,7 +12,7 @@ namespace Jubeka.Core.Tests.Application.Default
         {
             List<string> raw = ["Header1: Value1", "Header2: Value2"];
             Dictionary<string, string> vars = [];
-            List<(string Key, string Value)> parsed = _parser.Parse(raw, vars).ToList();
+            List<(string Key, string Value)> parsed = [.. _parser.Parse(raw, vars)];
             Assert.Equal(2, parsed.Count);
             Assert.Equal(("Header1", "Value1"), parsed[0]);
             Assert.Equal(("Header2", "Value2"), parsed[1]);
@@ -23,7 +23,7 @@ namespace Jubeka.Core.Tests.Application.Default
         {
             List<string> raw = ["Header1 Value1", "Header2-Value2", "Header3:"];
             Dictionary<string, string> vars = [];
-            List<(string Key, string Value)> parsed = _parser.Parse(raw, vars).ToList();
+            List<(string Key, string Value)> parsed = [.. _parser.Parse(raw, vars)];
             Assert.Equal([], parsed);
         }
     }

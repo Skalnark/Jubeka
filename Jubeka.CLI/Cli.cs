@@ -368,7 +368,7 @@ public sealed class Cli(
             }
 
             RequestDefinition updatedRequest = ApplyInlineEdits(config.Requests[inlineIndex], options);
-            List<RequestDefinition> inlineRequests = config.Requests.ToList();
+            List<RequestDefinition> inlineRequests = [.. config.Requests];
             inlineRequests[inlineIndex] = updatedRequest;
             EnvironmentConfig inlineConfig = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, inlineRequests);
             environmentConfigStore.Save(inlineConfig);
@@ -385,7 +385,7 @@ public sealed class Cli(
         }
 
         RequestDefinition edited = requestWizard.EditRequest(config.Requests[index], vars);
-        List<RequestDefinition> updatedRequests = config.Requests.ToList();
+        List<RequestDefinition> updatedRequests = [.. config.Requests];
         updatedRequests[index] = edited;
 
         EnvironmentConfig updated = new(config.Name, config.VarsPath, config.DefaultOpenApiSource, updatedRequests);

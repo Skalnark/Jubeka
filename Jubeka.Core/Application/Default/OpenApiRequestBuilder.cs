@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Jubeka.Core.Domain;

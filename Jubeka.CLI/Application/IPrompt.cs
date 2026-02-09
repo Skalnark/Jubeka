@@ -1,5 +1,3 @@
-using System;
-
 namespace Jubeka.CLI.Application;
 
 public interface IPrompt

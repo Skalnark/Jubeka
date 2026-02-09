@@ -1,9 +1,6 @@
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Jubeka.CLI.Infrastructure.Config;
 using Jubeka.CLI.Domain;
 using Jubeka.Core.Domain;
@@ -228,7 +225,7 @@ paths:
             string varsPath = Path.Combine(tempHome, "vars.yml");
             File.WriteAllText(varsPath, "variables:\n");
 
-                        string rawSpec = """
+            string rawSpec = """
 openapi: 3.0.0
 info:
     title: No Paths

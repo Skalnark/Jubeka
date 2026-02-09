@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Jubeka.CLI;
 
 namespace Jubeka.CLI.Tests.Integration;
 

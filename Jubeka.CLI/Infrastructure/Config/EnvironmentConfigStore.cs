@@ -277,15 +277,13 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
                     parameters.AddRange(operation.Parameters);
                 }
 
-                List<QueryParamDefinition> queryParams = parameters
+                List<QueryParamDefinition> queryParams = [.. parameters
                     .Where(p => p.In == ParameterLocation.Query)
-                    .Select(p => new QueryParamDefinition(p.Name, $"{{{{{p.Name}}}}}"))
-                    .ToList();
+                    .Select(p => new QueryParamDefinition(p.Name, $"{{{{{p.Name}}}}}"))];
 
-                List<string> headers = parameters
+                List<string> headers = [.. parameters
                     .Where(p => p.In == ParameterLocation.Header)
-                    .Select(p => $"{p.Name}: {{{{{p.Name}}}}}")
-                    .ToList();
+                    .Select(p => $"{p.Name}: {{{{{p.Name}}}}}")];
 
                 string baseName = string.IsNullOrWhiteSpace(operation.OperationId)
                     ? path
@@ -533,7 +531,7 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
     private static List<string> WriteRequestFiles(string envDirectory, IReadOnlyList<RequestDefinition> requests)
     {
-        List<string> files = new();
+        List<string> files = [];
         string requestsDir = Path.Combine(envDirectory, RequestsDirectory);
         Directory.CreateDirectory(requestsDir);
 
@@ -650,8 +648,8 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
         public string Method { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
         public string? Body { get; set; }
-        public List<QueryParamDefinitionDto> QueryParams { get; set; } = new();
-        public List<string> Headers { get; set; } = new();
+        public List<QueryParamDefinitionDto> QueryParams { get; set; } = [];
+        public List<string> Headers { get; set; } = [];
         public AuthConfigDto Auth { get; set; } = new();
 
         public static RequestDefinitionDto From(RequestDefinition request)
@@ -662,16 +660,16 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
                 Method = request.Method,
                 Url = request.Url,
                 Body = request.Body,
-                QueryParams = request.QueryParams.Select(QueryParamDefinitionDto.From).ToList(),
-                Headers = request.Headers.ToList(),
+                QueryParams = [.. request.QueryParams.Select(QueryParamDefinitionDto.From)],
+                Headers = [.. request.Headers],
                 Auth = AuthConfigDto.From(request.Auth)
             };
         }
 
         public RequestDefinition ToRequestDefinition()
         {
-            List<QueryParamDefinition> queryParams = QueryParams?.Select(q => q.ToQueryParamDefinition()).ToList() ?? new List<QueryParamDefinition>();
-            List<string> headers = Headers ?? new List<string>();
+            List<QueryParamDefinition> queryParams = QueryParams?.Select(q => q.ToQueryParamDefinition()).ToList() ?? [];
+            List<string> headers = Headers ?? [];
             AuthConfig auth = Auth?.ToAuthConfig() ?? new AuthConfig(AuthMethod.Inherit);
             return new RequestDefinition(Name, Method, Url, Body, queryParams, headers, auth);
         }
