@@ -17,7 +17,7 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Jubeka.CLI.Infrastructure.Config;
 
-public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
+public sealed partial class EnvironmentConfigStore : IEnvironmentConfigStore
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -446,7 +446,7 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
             return input;
         }
 
-        return Regex.Replace(input, "\\{([^}]+)\\}", "{{$1}}");
+        return TemplateVarRegex().Replace(input, "{{$1}}");
     }
 
     private static IEnumerable<string> ExtractTemplateVariables(string input)
@@ -456,10 +456,13 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
             return [];
         }
 
-        return Regex.Matches(input, "\\{([^}]+)\\}")
+        return TemplateVarRegex().Matches(input)
             .Select(match => match.Groups[1].Value)
             .Where(value => !string.IsNullOrWhiteSpace(value));
     }
+
+    [GeneratedRegex("\\{([^}]+)\\}")]
+    private static partial Regex TemplateVarRegex();
 
     private static string CombineUrl(string baseUrl, string path)
     {
