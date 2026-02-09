@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Jubeka.CLI.Application;
 using Jubeka.CLI.Domain;
 using Jubeka.Core.Domain;
@@ -236,6 +237,7 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
         OpenApiSpecLoader loader = new();
         return loader.LoadAsync(new OpenApiSource(OpenApiSourceKind.File, source.Value), CancellationToken.None)
+            .ConfigureAwait(false)
             .GetAwaiter()
             .GetResult();
     }
@@ -337,6 +339,10 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
         Dictionary<string, string> vars = LoadVariables(varsPath);
         Dictionary<string, string> specVars = BuildOpenApiVariables(document);
+        if (!specVars.ContainsKey(OpenApiTimeoutSecondsKey))
+        {
+            specVars[OpenApiTimeoutSecondsKey] = DefaultOpenApiTimeoutSeconds.ToString();
+        }
 
         foreach ((string key, string value) in specVars)
         {
@@ -510,8 +516,25 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
 
         try
         {
-            using HttpClient client = new();
-            return client.GetStringAsync(url).GetAwaiter().GetResult();
+            using CancellationTokenSource cts = new(OpenApiDownloadTimeout);
+            using HttpClient client = new()
+            {
+                Timeout = OpenApiDownloadTimeout
+            };
+
+            HttpResponseMessage response = client.GetAsync(url, cts.Token)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
+            response.EnsureSuccessStatusCode();
+            return response.Content.ReadAsStringAsync(cts.Token)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch (TaskCanceledException)
+        {
+            throw new OpenApiSpecificationException("Failed to download OpenAPI spec: request timed out.");
         }
         catch (Exception ex)
         {
@@ -723,6 +746,9 @@ public sealed class EnvironmentConfigStore : IEnvironmentConfigStore
     private const string VarsFileName = "vars.yml";
     private const string OpenApiFileName = "openapi.json";
     private const string RequestsDirectory = "requests";
+    private const int DefaultOpenApiTimeoutSeconds = 30;
+    private static readonly TimeSpan OpenApiDownloadTimeout = TimeSpan.FromSeconds(DefaultOpenApiTimeoutSeconds);
+    private const string OpenApiTimeoutSecondsKey = "openApiTimeoutSeconds";
 
     private sealed class EnvironmentYaml
     {

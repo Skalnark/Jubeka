@@ -76,6 +76,7 @@ public sealed class Cli(
     private async Task<int> RunRequestAsync(RequestCommandOptions options, CancellationToken cancellationToken)
     {
         IReadOnlyDictionary<string, string> vars = environmentVariablesLoader.Load(options.EnvPath);
+        double timeoutSeconds = ResolveTimeoutSeconds(options.TimeoutSeconds, vars);
         RequestOptions requestOptions = new(
             options.Method,
             options.Url,
@@ -86,7 +87,7 @@ public sealed class Cli(
         RequestData requestData = requestDataBuilder.Build(requestOptions, vars);
         ResponseData response = await HttpRequestExecutor.ExecuteAsync(
             requestData,
-            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            TimeSpan.FromSeconds(timeoutSeconds),
             cancellationToken).ConfigureAwait(false);
 
         responseWriter.Write(response, options.Pretty);
@@ -99,12 +100,13 @@ public sealed class Cli(
         IReadOnlyDictionary<string, string> vars = environmentVariablesLoader.Load(envPath);
         Microsoft.OpenApi.Models.OpenApiDocument document = await openApiSpecLoader.LoadAsync(source, cancellationToken).ConfigureAwait(false);
 
+        double timeoutSeconds = ResolveTimeoutSeconds(options.TimeoutSeconds, vars);
         RequestOptions openApiRequest = openApiRequestBuilder.Build(document, options.OperationId, vars);
         RequestData requestData = requestDataBuilder.Build(openApiRequest, vars);
 
         ResponseData response = await HttpRequestExecutor.ExecuteAsync(
             requestData,
-            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            TimeSpan.FromSeconds(timeoutSeconds),
             cancellationToken).ConfigureAwait(false);
 
         responseWriter.Write(response, options.Pretty);
@@ -422,6 +424,7 @@ public sealed class Cli(
         }
 
         IReadOnlyDictionary<string, string> vars = LoadEnvVarsSafe(config.VarsPath);
+        double timeoutSeconds = ResolveTimeoutSeconds(options.TimeoutSeconds, vars);
         RequestDefinition request = config.Requests[index];
         RequestOptions requestOptions = new(
             request.Method,
@@ -433,7 +436,7 @@ public sealed class Cli(
         RequestData requestData = requestDataBuilder.Build(requestOptions, vars);
         ResponseData response = await HttpRequestExecutor.ExecuteAsync(
             requestData,
-            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            TimeSpan.FromSeconds(timeoutSeconds),
             cancellationToken).ConfigureAwait(false);
 
         responseWriter.Write(response, false);
@@ -508,6 +511,23 @@ public sealed class Cli(
         return results;
     }
 
+    private static double ResolveTimeoutSeconds(double requestedSeconds, IReadOnlyDictionary<string, string> vars)
+    {
+        if (requestedSeconds != DefaultTimeoutSeconds)
+        {
+            return requestedSeconds;
+        }
+
+        if (vars.TryGetValue(OpenApiTimeoutSecondsKey, out string? raw)
+            && double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double parsed)
+            && parsed > 0)
+        {
+            return parsed;
+        }
+
+        return requestedSeconds;
+    }
+
     private IReadOnlyDictionary<string, string> LoadEnvVarsSafe(string? path)
     {
         try
@@ -523,4 +543,7 @@ public sealed class Cli(
             return new Dictionary<string, string>();
         }
     }
+
+    private const double DefaultTimeoutSeconds = 100;
+    private const string OpenApiTimeoutSecondsKey = "openApiTimeoutSeconds";
 }

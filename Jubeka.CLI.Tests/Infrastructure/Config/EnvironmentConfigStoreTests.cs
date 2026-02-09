@@ -113,6 +113,7 @@ paths:
             Assert.True(vars.ContainsKey("id"));
             Assert.True(vars.ContainsKey("filter"));
             Assert.Equal("https://example.com/{{version}}", vars["baseUrl"]);
+            Assert.Equal("30", vars["openApiTimeoutSeconds"]);
         }
         finally
         {
@@ -169,6 +170,42 @@ paths:
             Assert.True(vars.ContainsKey("baseUrl"));
             Assert.True(vars.ContainsKey("petId"));
             Assert.Equal("https://example.com", vars["baseUrl"]);
+            Assert.Equal("30", vars["openApiTimeoutSeconds"]);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("HOME", originalHome);
+            if (Directory.Exists(tempHome)) Directory.Delete(tempHome, true);
+        }
+    }
+
+    [Fact]
+    public async Task Save_WithUrlSpec_Timeout_Throws()
+    {
+        string tempHome = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempHome);
+        string? originalHome = Environment.GetEnvironmentVariable("HOME");
+
+        await using HangingOpenApiServer server = await HangingOpenApiServer.StartAsync();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("HOME", tempHome);
+
+            string varsPath = Path.Combine(tempHome, "vars.yml");
+            File.WriteAllText(varsPath, "variables:\n");
+
+            EnvironmentConfigStore store = new();
+            EnvironmentConfig config = new(
+                Name: "dev",
+                VarsPath: varsPath,
+                DefaultOpenApiSource: new OpenApiSource(OpenApiSourceKind.Url, server.SpecUrl),
+                Requests: []);
+
+            OpenApiSpecificationException ex = Assert.Throws<OpenApiSpecificationException>(() => store.Save(config));
+            Assert.True(
+                ex.Message.Contains("timed out", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("empty", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
@@ -289,6 +326,92 @@ paths: {}
 
                 await context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length, _cts.Token).ConfigureAwait(false);
                 context.Response.Close();
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            _cts.Cancel();
+            _listener.Close();
+            try
+            {
+                await _loop.ConfigureAwait(false);
+            }
+            catch
+            {
+                // ignore
+            }
+
+            _cts.Dispose();
+        }
+    }
+
+    private sealed class HangingOpenApiServer : IAsyncDisposable
+    {
+        private readonly HttpListener _listener;
+        private readonly CancellationTokenSource _cts = new();
+        private readonly Task _loop;
+
+        private HangingOpenApiServer(HttpListener listener, string baseAddress)
+        {
+            _listener = listener;
+            SpecUrl = baseAddress + "openapi.json";
+            _loop = Task.Run(ServeAsync);
+        }
+
+        public string SpecUrl { get; }
+
+        public static async Task<HangingOpenApiServer> StartAsync()
+        {
+            int port;
+            using (TcpListener socket = new(IPAddress.Loopback, 0))
+            {
+                socket.Start();
+                port = ((IPEndPoint)socket.LocalEndpoint).Port;
+            }
+
+            string prefix = $"http://127.0.0.1:{port}/";
+            HttpListener listener = new();
+            listener.Prefixes.Add(prefix);
+            listener.Start();
+            await Task.Yield();
+            return new HangingOpenApiServer(listener, prefix);
+        }
+
+        private async Task ServeAsync()
+        {
+            while (!_cts.IsCancellationRequested)
+            {
+                HttpListenerContext context;
+                try
+                {
+                    context = await _listener.GetContextAsync().ConfigureAwait(false);
+                }
+                catch (ObjectDisposedException) when (_cts.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (HttpListenerException) when (_cts.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (HttpListenerException)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10), _cts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignore
+                }
+                finally
+                {
+                    context.Response.Close();
+                }
             }
         }
 
